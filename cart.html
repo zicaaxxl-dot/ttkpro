@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Carrinho</title>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        :root {
+            --bg: #f2f2f2;
+            --white: #fff;
+            --text: #161823;
+            --text-muted: #73747b;
+            --accent: #ff2d55;
+            --border: #e5e7eb
+        }
+
+        html {
+            font-size: 15px
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column
+        }
+
+        button {
+            cursor: pointer;
+            border: none;
+            background: none;
+            font: inherit;
+            color: inherit
+        }
+
+        .cart-header {
+            background: #fff;
+            padding: 14px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 10
+        }
+
+        .cart-header svg {
+            width: 18px;
+            height: 18px
+        }
+
+        .cart-header h3 {
+            flex: 1;
+            font-size: 15px;
+            font-weight: 700;
+            text-align: center
+        }
+
+        .cart-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px
+        }
+
+        .cart-item {
+            background: #fff;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            gap: 10px;
+            align-items: center
+        }
+
+        .cart-item-img {
+            width: 60px;
+            height: 60px;
+            border-radius: 6px;
+            object-fit: cover;
+            background: #f3f4f6;
+            flex-shrink: 0
+        }
+
+        .cart-item-info {
+            flex: 1;
+            min-width: 0
+        }
+
+        .cart-item-name {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden
+        }
+
+        .cart-item-price {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--accent)
+        }
+
+        .cart-item-qty {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 6px
+        }
+
+        .cart-qty-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: #f3f4f6;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center
+        }
+
+        .cart-qty-val {
+            font-size: 13px;
+            font-weight: 600;
+            min-width: 20px;
+            text-align: center
+        }
+
+        .cart-item-remove {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-decoration: underline;
+            margin-left: 10px
+        }
+
+        .cart-footer {
+            background: #fff;
+            padding: 14px;
+            border-top: 1px solid var(--border)
+        }
+
+        .cart-total-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 15px;
+            font-weight: 800;
+            margin-bottom: 12px
+        }
+
+        .cart-checkout-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700
+        }
+
+        .cart-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #9ca3af
+        }
+
+        .cart-empty svg {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 12px;
+            opacity: .3
+        }
+    </style>
+</head>
+
+<body>
+    <div class="cart-header">
+        <button onclick="goBack()" aria-label="Voltar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6" />
+            </svg>
+        </button>
+        <h3>Carrinho</h3>
+        <span id="cartItemCount" style="font-size:12px;color:var(--text-muted)">0 itens</span>
+    </div>
+
+    <div class="cart-body" id="cartBody">
+        <div class="cart-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <circle cx="9" cy="21" r="1" />
+                <circle cx="20" cy="21" r="1" />
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+            </svg>
+            <div style="font-size:14px;font-weight:600;color:#374151;margin-bottom:4px">Carrinho vazio</div>
+            <div style="font-size:12px">Adicione produtos para continuar</div>
+        </div>
+    </div>
+
+    <div class="cart-footer" id="cartFooter" style="display:none">
+        <div class="cart-total-row"><span>Total</span><span style="color:var(--accent)" id="cartTotal">R$
+                0,00</span></div>
+        <button class="cart-checkout-btn" onclick="goCheckout()">Finalizar Compra →</button>
+    </div>
+
+    <script>
+        /* ============================================================
+           CARRINHO REAL — fonte única de verdade: sessionStorage/localStorage 'epro_cart'
+           Compatível com o mesmo formato usado em template_lp.html e checkout.html
+           ============================================================ */
+        const CART_KEY = 'epro_cart';
+
+        function getCart() {
+            try {
+                const raw = sessionStorage.getItem(CART_KEY) || localStorage.getItem(CART_KEY);
+                let cart = raw ? JSON.parse(raw) : { items: [], qty: 0 };
+                // Remove qualquer item inválido (nome vazio, preço <=0 ou qty <=0) — 
+                // limpa lixo que possa ter ficado salvo de testes/erros anteriores
+                cart.items = (cart.items || []).filter(i => i && i.name && Number(i.price) > 0 && Number(i.qty) > 0);
+                cart.qty = cart.items.reduce((s, i) => s + i.qty, 0);
+                return cart;
+            } catch (_) { return { items: [], qty: 0 }; }
+        }
+
+        function saveCart(cart) {
+            cart.qty = cart.items.reduce((s, i) => s + i.qty, 0);
+            const s = JSON.stringify(cart);
+            try { sessionStorage.setItem(CART_KEY, s); } catch (_) { }
+            try { localStorage.setItem(CART_KEY, s); } catch (_) { }
+            return cart;
+        }
+
+        function fmtBRL(n) { return Number(n || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+        function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+        function goBack() {
+            if (window.history.length > 1) history.back();
+            else window.location.href = 'template_lp.html';
+        }
+
+        function goCheckout() {
+            window.location.href = 'checkout.html';
+        }
+
+        function changeQty(name, delta) {
+            const cart = getCart();
+            const item = cart.items.find(i => i.name === name);
+            if (!item) return;
+            item.qty += delta;
+            if (item.qty <= 0) cart.items = cart.items.filter(i => i.name !== name);
+            saveCart(cart);
+            render();
+        }
+
+        function removeItem(name) {
+            const cart = getCart();
+            cart.items = cart.items.filter(i => i.name !== name);
+            saveCart(cart);
+            render();
+        }
+
+        function render() {
+            const cart = getCart();
+            const body = document.getElementById('cartBody');
+            const footer = document.getElementById('cartFooter');
+
+            if (!cart.items.length) {
+                body.innerHTML = `<div class="cart-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            <div style="font-size:14px;font-weight:600;color:#374151;margin-bottom:4px">Carrinho vazio</div>
+            <div style="font-size:12px">Adicione produtos para continuar</div>
+        </div>`;
+                footer.style.display = 'none';
+                document.getElementById('cartItemCount').textContent = '0 itens';
+                return;
+            }
+
+            body.innerHTML = cart.items.map(item => `
+        <div class="cart-item">
+            ${item.image ? `<img class="cart-item-img" src="${esc(item.image)}" alt="${esc(item.name)}" onerror="this.style.background='#e5e7eb'">` : '<div class="cart-item-img"></div>'}
+            <div class="cart-item-info">
+                <div class="cart-item-name">${esc(item.name)}</div>
+                <div class="cart-item-price">R$ ${fmtBRL(item.price)}</div>
+                <div class="cart-item-qty">
+                    <button class="cart-qty-btn" onclick="changeQty('${esc(item.name).replace(/'/g, "\\'")}',-1)">−</button>
+                    <div class="cart-qty-val">${item.qty}</div>
+                    <button class="cart-qty-btn" onclick="changeQty('${esc(item.name).replace(/'/g, "\\'")}',1)">+</button>
+                    <span class="cart-item-remove" onclick="removeItem('${esc(item.name).replace(/'/g, "\\'")}')">remover</span>
+                </div>
+            </div>
+        </div>`).join('');
+
+            const total = cart.items.reduce((s, i) => s + (Number(i.price) || 0) * i.qty, 0);
+            const qtyTotal = cart.items.reduce((s, i) => s + i.qty, 0);
+            footer.style.display = '';
+            document.getElementById('cartItemCount').textContent = qtyTotal + (qtyTotal === 1 ? ' item' : ' itens');
+            document.getElementById('cartTotal').textContent = 'R$ ' + fmtBRL(total);
+        }
+
+        // Mantém o carrinho sincronizado caso outra aba/iframe (ex: a LP) altere o storage
+        window.addEventListener('storage', e => { if (e.key === CART_KEY) render(); });
+
+        render();
+    </script>
+</body>
+
+</html>

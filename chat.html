@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chat</title>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        html {
+            font-size: 15px
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #fff
+        }
+
+        button {
+            cursor: pointer;
+            border: none;
+            background: none;
+            font: inherit;
+            color: inherit
+        }
+
+        .chat-header {
+            background: #075E54;
+            color: #fff;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 10
+        }
+
+        .chat-back {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0
+        }
+
+        .chat-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #128C7E;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            color: #fff;
+            flex-shrink: 0;
+            overflow: hidden
+        }
+
+        .chat-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover
+        }
+
+        .chat-header-info {
+            flex: 1
+        }
+
+        .chat-header-name {
+            font-size: 14px;
+            font-weight: 700
+        }
+
+        .chat-header-sub {
+            font-size: 11px;
+            opacity: .8
+        }
+
+        .chat-body {
+            flex: 1;
+            background: #e5ddd5;
+            padding: 12px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px
+        }
+
+        .chat-msg {
+            max-width: 80%;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.4
+        }
+
+        .chat-msg.from-us {
+            background: #dcf8c6;
+            align-self: flex-end;
+            border-radius: 8px 2px 8px 8px
+        }
+
+        .chat-msg.from-them {
+            background: #fff;
+            align-self: flex-start;
+            border-radius: 2px 8px 8px 8px
+        }
+
+        .chat-msg-time {
+            font-size: 10px;
+            color: #6b7280;
+            text-align: right;
+            margin-top: 2px
+        }
+
+        .chat-footer {
+            background: #f0f0f0;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .chat-input {
+            flex: 1;
+            background: #fff;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 14px;
+            font-size: 13px;
+            outline: none
+        }
+
+        .chat-send {
+            width: 38px;
+            height: 38px;
+            background: #128C7E;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center
+        }
+
+        .chat-send svg {
+            width: 18px;
+            height: 18px;
+            color: #fff
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat-header">
+        <button class="chat-back" onclick="goBack()" aria-label="Voltar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+                <path d="M15 18l-6-6 6-6" />
+            </svg>
+        </button>
+        <div class="chat-avatar" id="chatAvatar">L</div>
+        <div class="chat-header-info">
+            <div class="chat-header-name" id="chatName">Loja Oficial</div>
+            <div class="chat-header-sub">Online agora</div>
+        </div>
+    </div>
+    <div class="chat-body" id="chatBody">
+        <div class="chat-msg from-them">Olá! 👋 Bem-vindo à nossa loja. Como posso te ajudar?
+            <div class="chat-msg-time">Agora</div>
+        </div>
+        <div class="chat-msg from-us">Olá! Quero saber mais sobre o produto
+            <div class="chat-msg-time">Agora</div>
+        </div>
+        <div class="chat-msg from-them" id="chatProductMsg">Claro! Temos disponível no momento. Posso te passar mais
+            detalhes?
+            <div class="chat-msg-time">Agora</div>
+        </div>
+    </div>
+    <div class="chat-footer">
+        <input class="chat-input" placeholder="Digite uma mensagem..." id="chatInput" onkeydown="sendChatMsg(event)">
+        <div class="chat-send" onclick="sendChatMsg({ key: 'Enter' })">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>
+        </div>
+    </div>
+
+    <script>
+        let PROJECT = null;
+        function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+        function fmtBRL(n) { return Number(n || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+
+        function goBack() {
+            if (window.self !== window.top) return;
+            if (window.history.length > 1) history.back();
+            else window.location.href = 'template_lp.html';
+        }
+
+        window.addEventListener('message', (e) => {
+            if (!e.data || e.data.type !== 'epro:update') return;
+            PROJECT = e.data.project;
+            render();
+        });
+
+        (function tryLoadStandalone() {
+            try {
+                const raw = localStorage.getItem('epro_lp_project');
+                if (raw) { PROJECT = JSON.parse(raw); render(); }
+            } catch (_) { }
+        })();
+
+        function render() {
+            if (!PROJECT) return;
+            const b = PROJECT.basico || {};
+            const avatarEl = document.getElementById('chatAvatar');
+            if (b.shop_avatar) {
+                avatarEl.innerHTML = `<img src="${esc(b.shop_avatar)}" alt="Loja">`;
+            } else if (b.title) {
+                avatarEl.textContent = b.title.charAt(0).toUpperCase();
+            }
+            const shopName = b.shop_name || (b.title ? b.title.split(' ')[0] + ' Loja' : 'Loja Oficial');
+            document.getElementById('chatName').textContent = shopName;
+            if (b.title) {
+                document.getElementById('chatProductMsg').innerHTML = `Claro! O <strong>${esc(b.title)}</strong> está disponível por <strong style="color:#25D366">R$ ${fmtBRL(b.price || 0)}</strong>. Quer finalizar o pedido? 🎉<div class="chat-msg-time">Agora</div>`;
+            }
+        }
+
+        function sendChatMsg(e) {
+            if (e.key !== 'Enter') return;
+            const input = document.getElementById('chatInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+            const body = document.getElementById('chatBody');
+            const el = document.createElement('div');
+            el.className = 'chat-msg from-us';
+            el.innerHTML = esc(msg) + '<div class="chat-msg-time">Agora</div>';
+            body.appendChild(el); input.value = ''; body.scrollTop = body.scrollHeight;
+            setTimeout(() => {
+                const reply = document.createElement('div');
+                reply.className = 'chat-msg from-them';
+                const replies = ['Perfeito! Posso te ajudar mais?', 'Claro, vou te auxiliar!', 'Sim, temos disponível! 😊', 'Entendido! Em que mais posso ajudar?'];
+                reply.innerHTML = replies[Math.floor(Math.random() * replies.length)] + '<div class="chat-msg-time">Agora</div>';
+                body.appendChild(reply); body.scrollTop = body.scrollHeight;
+            }, 1000);
+        }
+    </script>
+</body>
+
+</html>

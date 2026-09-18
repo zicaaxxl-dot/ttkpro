@@ -1,0 +1,1761 @@
+<!doctype html>
+<!-- checkout.html -->
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Resumo do Pedido</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #f4f5f5;
+        --white: #ffffff;
+        --text: #161823;
+        --text-muted: #73747b;
+        --text-light: #8a8b91;
+        --accent: #fe2c55;
+        --accent-dark: #e3264c;
+        --accent-bg: #ffe5ea;
+        --green: #20d5a3;
+        --green-light: #e6f9f4;
+        --pix: #32bcad;
+        --border: #e5e5e5;
+        --input-border: #e5e7eb;
+        --error: #fe2c55;
+        --radius: 4px;
+        --footer-h: 100px;
+      }
+
+      html {
+        font-size: 15px;
+        -webkit-text-size-adjust: 100%;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        line-height: 1.5;
+        padding-bottom: calc(var(--footer-h) + 16px);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      button {
+        cursor: pointer;
+        border: none;
+        background: none;
+        font: inherit;
+      }
+
+      /* TOPBAR (TIKTOK STYLE) */
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--white);
+        display: flex;
+        flex-direction: column;
+        padding: 12px 16px 8px;
+        border-bottom: 1px solid var(--bg);
+      }
+
+      .topbar-main {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+      }
+
+      .topbar-back {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        color: var(--text);
+      }
+
+      .topbar-back svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .topbar-title {
+        font-size: 17px;
+        font-weight: 700;
+        text-align: center;
+        flex: 1;
+      }
+
+      .topbar-secure {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        font-size: 11px;
+        color: var(--green);
+        font-weight: 500;
+        margin-top: 2px;
+      }
+
+      .topbar-secure svg {
+        width: 12px;
+        height: 12px;
+      }
+
+      /* TIKTOK DASHED BORDER */
+      .tiktok-divider {
+        height: 3px;
+        width: 100%;
+        background-image: repeating-linear-gradient(
+          to right,
+          #fe2c55 0px,
+          #fe2c55 12px,
+          transparent 12px,
+          transparent 18px,
+          #32bcad 18px,
+          #32bcad 30px,
+          transparent 30px,
+          transparent 36px
+        );
+        margin: 0;
+        border: none;
+      }
+
+      /* PROGRESS BAR */
+      .progress-bar {
+        background: var(--white);
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .progress-steps {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        max-width: 300px;
+        margin: 0 auto;
+      }
+
+      .step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        position: relative;
+        z-index: 2;
+      }
+
+      .step-circle {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-muted);
+        transition: all 0.3s;
+      }
+
+      .step.active .step-circle {
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .step.done .step-circle {
+        background: var(--text);
+        color: #fff;
+      }
+
+      .step-label {
+        font-size: 11px;
+        color: var(--text-light);
+        font-weight: 600;
+      }
+
+      .step.active .step-label {
+        color: var(--accent);
+      }
+
+      .step.done .step-label {
+        color: var(--text);
+      }
+
+      .step-line {
+        flex: 1;
+        height: 2px;
+        background: var(--border);
+        margin: 0 -10px;
+        position: relative;
+        top: -9px;
+        z-index: 1;
+        transition: background 0.3s;
+      }
+
+      .step-line.done {
+        background: var(--text);
+      }
+
+      /* SECTION */
+      .section {
+        background: var(--white);
+        margin-bottom: 8px;
+        padding: 16px;
+      }
+
+      .section-title {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text);
+      }
+
+      /* FIELDS */
+      .field {
+        margin-bottom: 12px;
+        position: relative;
+      }
+
+      .field:last-child {
+        margin-bottom: 0;
+      }
+
+      .field-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text);
+        margin-bottom: 4px;
+      }
+
+      .field-label span {
+        color: var(--accent);
+      }
+
+      .input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--input-border);
+        border-radius: var(--radius);
+        font-size: 14px;
+        color: var(--text);
+        background: #fff;
+        transition: all 0.2s;
+        -webkit-appearance: none;
+      }
+
+      .input:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+
+      .input.error {
+        border-color: var(--error);
+      }
+
+      .input.ok {
+        border-color: var(--green);
+      }
+
+      .field-err {
+        font-size: 11px;
+        color: var(--error);
+        margin-top: 4px;
+        display: none;
+      }
+
+      .field-err.show {
+        display: block;
+      }
+
+      .field-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      /* STORE / PRODUCT TIKTOK CLONE */
+      .store-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 700;
+        font-size: 14px;
+        padding-bottom: 12px;
+      }
+
+      .store-header span {
+        font-weight: 400;
+        color: var(--text-muted);
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .summary-product {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        padding-bottom: 16px;
+      }
+
+      .summary-img {
+        width: 80px;
+        height: 80px;
+        border-radius: 4px;
+        object-fit: cover;
+        background: var(--bg);
+        flex-shrink: 0;
+        border: 1px solid var(--border);
+      }
+
+      .summary-info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .summary-name {
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        color: var(--text);
+      }
+
+      .summary-variant {
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      .summary-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--text-muted);
+        font-size: 11px;
+      }
+
+      .summary-badge::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        background: #facc15;
+        border-radius: 50%;
+      }
+
+      .price-qty-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 4px;
+      }
+
+      .summary-price-wrap {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .summary-price {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--accent);
+      }
+
+      .summary-price-old {
+        font-size: 11px;
+        color: var(--text-light);
+        text-decoration: line-through;
+      }
+
+      .qty-controls {
+        display: flex;
+        align-items: center;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        overflow: hidden;
+      }
+
+      .qty-btn {
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--white);
+        color: var(--text-muted);
+        font-size: 16px;
+      }
+
+      .qty-val {
+        width: 32px;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 500;
+        border-left: 1px solid var(--border);
+        border-right: 1px solid var(--border);
+      }
+
+      .shipping-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 12px;
+        border-top: 1px solid var(--bg);
+        font-size: 13px;
+      }
+
+      .shipping-dates {
+        font-weight: 500;
+        color: var(--text);
+      }
+
+      .shipping-type {
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      /* LIST ITEMS (TikTok Action Rows) */
+      .action-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 0;
+        border-bottom: 1px solid var(--bg);
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .action-row:last-child {
+        border-bottom: none;
+      }
+
+      .action-row-content {
+        display: flex;
+        align-items: center;
+      }
+
+      /* BUMP (Order Bump) */
+      .bump-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text);
+        margin: 16px 0 12px;
+      }
+
+      .bump-item {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: var(--white);
+      }
+
+      .bump-item.selected {
+        border-color: var(--accent);
+        background: var(--accent-bg);
+      }
+
+      .bump-check {
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--input-border);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: all 0.2s;
+      }
+
+      .bump-item.selected .bump-check {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .bump-check svg {
+        width: 12px;
+        height: 12px;
+        color: #fff;
+        opacity: 0;
+      }
+
+      .bump-item.selected .bump-check svg {
+        opacity: 1;
+      }
+
+      .bump-img {
+        width: 48px;
+        height: 48px;
+        border-radius: 4px;
+        object-fit: cover;
+        background: var(--bg);
+      }
+
+      .bump-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .bump-name {
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1.3;
+      }
+
+      .bump-add-label {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 2px;
+      }
+
+      .bump-add-price {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text);
+        margin-top: 2px;
+      }
+
+      /* STICKY FOOTER */
+      .sticky-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: var(--footer-h);
+        background: var(--white);
+        border-top: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 0 16px;
+        z-index: 100;
+      }
+
+      .footer-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        margin-bottom: 10px;
+      }
+
+      .footer-total-label {
+        font-size: 14px;
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .footer-total-val {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--accent);
+      }
+
+      .submit-btn {
+        height: 44px;
+        width: 100%;
+        background: var(--accent);
+        color: #fff;
+        border-radius: var(--radius);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+
+      .submit-btn:active {
+        opacity: 0.8;
+        transform: scale(0.98);
+      }
+
+      .submit-btn:disabled {
+        background: var(--border);
+        color: var(--text-muted);
+        cursor: not-allowed;
+      }
+
+      .submit-btn .btn-text {
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 1.2;
+      }
+
+      .submit-btn .btn-sub {
+        font-size: 10px;
+        font-weight: 400;
+        opacity: 0.9;
+      }
+
+      .submit-btn .spinner {
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        display: none;
+      }
+
+      .submit-btn.loading .spinner {
+        display: block;
+      }
+
+      .submit-btn.loading .btn-text,
+      .submit-btn.loading .btn-sub {
+        display: none;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* PIX E SUCESSO */
+      .pix-block,
+      .paid-block {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .pix-block.show,
+      .paid-block.show {
+        display: flex;
+      }
+
+      .pix-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 8px;
+      }
+
+      /* Ajuste do QR Code */
+      .pix-qr-wrap {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        margin: 8px 0;
+      }
+
+      .pix-qr-wrap img {
+        width: 160px;
+        height: 160px;
+        display: block;
+      }
+
+      .pix-expires {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+
+      .pix-timer {
+        background: var(--accent);
+        color: #fff;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .pix-code-text {
+        font-size: 14px;
+        font-family: monospace;
+        font-weight: 600;
+        padding: 12px;
+        background: var(--bg);
+        border-radius: 8px;
+        width: 100%;
+        word-break: break-all;
+        text-align: center;
+      }
+
+      .pix-copy-btn {
+        width: 100%;
+        padding: 14px;
+        background: var(--text);
+        color: #fff;
+        font-size: 15px;
+        font-weight: 600;
+        border-radius: var(--radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .toast-host {
+        position: fixed;
+        bottom: calc(var(--footer-h) + 16px);
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 200;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        pointer-events: none;
+      }
+
+      .toast {
+        background: rgba(0, 0, 0, 0.85);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 500;
+        padding: 10px 20px;
+        border-radius: 20px;
+        white-space: nowrap;
+        animation: toastIn 0.25s ease forwards;
+      }
+
+      @keyframes toastIn {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="topbar">
+      <div class="topbar-main">
+        <button class="topbar-back" onclick="history.back()">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+        <div class="topbar-title">Resumo do pedido</div>
+        <div style="width: 24px"></div>
+      </div>
+      <div class="topbar-secure">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg>
+        Seus dados estão seguros conosco
+      </div>
+    </header>
+
+    <div class="progress-bar">
+      <div class="progress-steps">
+        <div class="step active" id="step1">
+          <div class="step-circle">1</div>
+          <div class="step-label">Dados</div>
+        </div>
+        <div class="step-line" id="line1"></div>
+        <div class="step" id="step2">
+          <div class="step-circle">2</div>
+          <div class="step-label">Pagamento</div>
+        </div>
+        <div class="step-line" id="line2"></div>
+        <div class="step" id="step3">
+          <div class="step-circle">3</div>
+          <div class="step-label">Fim</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="pageStep1">
+      <div class="section">
+        <div class="section-title">Informações de Contato</div>
+        <div class="field" id="f-name">
+          <label class="field-label">Nome completo <span>*</span></label>
+          <input
+            class="input"
+            id="inp-name"
+            type="text"
+            placeholder="Como está no documento"
+          />
+          <div class="field-err" id="err-name">Informe seu nome completo</div>
+        </div>
+        <div class="field" id="f-email">
+          <label class="field-label">E-mail <span>*</span></label>
+          <input
+            class="input"
+            id="inp-email"
+            type="email"
+            placeholder="Para receber o rastreio"
+          />
+          <div class="field-err" id="err-email">E-mail inválido</div>
+        </div>
+        <div class="field-row">
+          <div class="field" id="f-cpf">
+            <label class="field-label">CPF <span>*</span></label>
+            <input
+              class="input"
+              id="inp-cpf"
+              type="text"
+              placeholder="000.000.000-00"
+              maxlength="14"
+            />
+            <div class="field-err" id="err-cpf">CPF inválido</div>
+          </div>
+          <div class="field" id="f-phone">
+            <label class="field-label">Celular <span>*</span></label>
+            <input
+              class="input"
+              id="inp-phone"
+              type="tel"
+              placeholder="(00) 00000-0000"
+              maxlength="15"
+            />
+            <div class="field-err" id="err-phone">Número inválido</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Endereço de Entrega</div>
+        <div class="field" id="f-cep">
+          <label class="field-label">CEP <span>*</span></label>
+          <input
+            class="input"
+            id="inp-cep"
+            type="text"
+            placeholder="00000-000"
+            maxlength="9"
+          />
+          <div class="field-err" id="err-cep">CEP inválido</div>
+        </div>
+        <div class="field" id="f-street">
+          <label class="field-label">Rua/Avenida <span>*</span></label>
+          <input
+            class="input"
+            id="inp-street"
+            type="text"
+            placeholder="Ex: Rua das Flores"
+          />
+          <div class="field-err" id="err-street">Informe a rua</div>
+        </div>
+        <div class="field-row">
+          <div class="field" id="f-num">
+            <label class="field-label">Número <span>*</span></label>
+            <input class="input" id="inp-num" type="text" placeholder="123" />
+            <div class="field-err" id="err-num">Obrigatório</div>
+          </div>
+          <div class="field">
+            <label class="field-label">Complemento</label>
+            <input
+              class="input"
+              id="inp-comp"
+              type="text"
+              placeholder="Apto, Casa 2"
+            />
+          </div>
+        </div>
+        <div class="field" id="f-hood">
+          <label class="field-label">Bairro <span>*</span></label>
+          <input class="input" id="inp-hood" type="text" />
+          <div class="field-err" id="err-hood">Obrigatório</div>
+        </div>
+        <div class="field-row">
+          <div class="field" id="f-city">
+            <label class="field-label">Cidade <span>*</span></label>
+            <input class="input" id="inp-city" type="text" />
+            <div class="field-err" id="err-city">Obrigatório</div>
+          </div>
+          <div class="field" id="f-uf">
+            <label class="field-label">UF <span>*</span></label>
+            <input
+              class="input"
+              id="inp-uf"
+              type="text"
+              maxlength="2"
+              placeholder="SP"
+            />
+            <div class="field-err" id="err-uf">Inválido</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="pageStep2" style="display: none">
+      <div class="section" style="padding: 0 16px">
+        <div class="action-row" onclick="setStep(1)">
+          <div
+            class="action-row-content"
+            style="flex-direction: column; align-items: flex-start; gap: 4px"
+          >
+            <div style="font-weight: 500; font-size: 13px" id="resume-name">
+              —
+            </div>
+            <div
+              style="color: var(--text-muted); font-size: 13px"
+              id="resume-address"
+            >
+              —
+            </div>
+          </div>
+          <span style="color: var(--text-muted)">></span>
+        </div>
+        <div class="action-row" onclick="setStep(1)">
+          <div class="action-row-content">
+            <span style="font-weight: 500; font-size: 13px" id="resume-cpf"
+              >CPF Adicionado</span
+            >
+          </div>
+          <span style="color: var(--text-muted)">></span>
+        </div>
+      </div>
+
+      <div class="tiktok-divider"></div>
+
+      <div class="section" style="padding: 12px 16px">
+        <div class="action-row" style="padding: 4px 0">
+          <div class="action-row-content" style="gap: 8px">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--accent)"
+              stroke-width="2"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <polyline points="9 11 12 14 22 4" />
+            </svg>
+            <span style="font-weight: 600; font-size: 14px"
+              >Desconto da Loja</span
+            >
+          </div>
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              align-items: flex-end;
+              font-size: 12px;
+            "
+          >
+            <span style="color: var(--pix); font-weight: 600">- R$ 20,00</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="store-header">
+          Loja Oficial
+          <span>Adicionar nota ></span>
+        </div>
+
+        <div class="summary-product">
+          <img
+            class="summary-img"
+            id="sumImg"
+            src=""
+            alt="Produto"
+            style="display: none"
+          />
+          <div class="summary-info">
+            <div class="summary-name" id="sumName">—</div>
+            <div class="summary-variant">padrão</div>
+            <div class="summary-badge" id="sumBadge">Devolução gratuita</div>
+
+            <div class="price-qty-row">
+              <div class="summary-price-wrap">
+                <div class="summary-price" id="sumPrice">R$ 0,00</div>
+                <div class="summary-price-old">R$ 0,00 - 0%</div>
+              </div>
+              <div class="qty-controls">
+                <div class="qty-btn" id="stepQtyMinus">-</div>
+                <div class="qty-val" id="stepQtyVal">1</div>
+                <div class="qty-btn" id="stepQtyPlus">+</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="shipping-info">
+          <div>
+            <div class="shipping-dates">Receba até 3 dias úteis</div>
+            <div class="shipping-type">Envio padrão</div>
+          </div>
+          <div style="text-align: right">
+            <div style="font-weight: 500">Grátis</div>
+            <div
+              style="
+                font-size: 11px;
+                text-decoration: line-through;
+                color: var(--text-light);
+              "
+            >
+              R$ 18,30
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section" id="bumpSection" style="display: none">
+        <div class="bump-title">Recomendado para você</div>
+        <div id="bumpList"></div>
+      </div>
+    </div>
+
+    <div id="pageStep3" style="display: none">
+      <div
+        class="section"
+        style="padding-top: 32px; padding-bottom: 32px; min-height: 60vh"
+      >
+        <div class="pix-block" id="pixBlock">
+          <div class="pix-header">
+            <svg
+              viewBox="0 0 512 512"
+              fill="currentColor"
+              width="24"
+              height="24"
+            >
+              <path
+                d="M242.4 292.5C247.8 287.1 255.1 284.2 262.5 284.2C269.9 284.2 277.2 287.1 282.6 292.5L371.1 381C377.1 387 383.8 391.4 390.4 394.1C405.2 400.1 422.8 400.1 437.6 394.1C444.2 391.4 450.9 387 456.9 381L474.6 363.3L473.1 360.6C468.9 354.9 465.6 348.5 463.5 341.7C461.4 334.9 460.4 327.8 460.4 320.6V304C460.4 287.4 449.4 272.8 433.7 267.3L343.2 236.6C343.2 236.6 270.5 213.8 238.3 213.8C206.1 213.8 133.4 236.6 133.4 236.6L42.9 267.3C27.2 272.8 16.2 287.4 16.2 304V320.6C16.2 327.8 15.2 334.9 13.1 341.7C11 348.5 7.7 354.9 3.5 360.6L2 363.3L19.7 381C25.7 387 32.4 391.4 39 394.1C53.8 400.1 71.4 400.1 86.2 394.1C92.8 391.4 99.5 387 105.5 381L194 292.5C199.4 287.1 206.7 284.2 214.1 284.2C221.5 284.2 228.8 287.1 234.2 292.5H242.4Z"
+              />
+            </svg>
+            Pague com PIX
+          </div>
+
+          <div class="pix-qr-wrap">
+            <img id="pixQrImg" src="" alt="QR Code PIX" />
+          </div>
+
+          <div class="pix-expires">
+            Vence em <span class="pix-timer" id="pixTimer">23:59:47</span>
+          </div>
+
+          <div class="pix-code-text" id="pixCodeText">Gerando...</div>
+
+          <button class="pix-copy-btn" id="pixCopyBtn">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              width="20"
+              height="20"
+            >
+              <rect x="9" y="9" width="13" height="13" rx="2" />
+              <path
+                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+              />
+            </svg>
+            Copiar código PIX
+          </button>
+
+          <div
+            style="
+              font-size: 13px;
+              color: var(--text-muted);
+              text-align: center;
+              margin-top: 8px;
+            "
+          >
+            Abra o app do seu banco, escolha <strong>Pix Copia e Cola</strong> e
+            cole o código.
+          </div>
+        </div>
+
+        <div class="paid-block" id="paidBlock">
+          <svg
+            width="64"
+            height="64"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--green)"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          <div style="font-size: 20px; font-weight: 700">
+            Pedido Confirmado!
+          </div>
+          <div
+            style="
+              text-align: center;
+              color: var(--text-muted);
+              font-size: 14px;
+            "
+          >
+            Em breve você receberá as atualizações de rastreio no seu e-mail.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="sticky-footer" id="stickyFooter">
+      <div class="footer-row">
+        <div class="footer-total-label">
+          Total
+          <span
+            style="font-weight: 400; color: var(--text-muted)"
+            id="footerItemLabel"
+            >(1 item)</span
+          >
+        </div>
+        <div class="footer-total-val" id="footerTotal">R$ 0,00</div>
+      </div>
+      <button class="submit-btn" id="submitBtn">
+        <span class="btn-text" id="btnText">Continuar</span>
+        <span class="btn-sub" id="btnSubText"
+          >Oferta Relâmpago termina em <span id="timerTxt">00:53:01</span></span
+        >
+        <div class="spinner"></div>
+      </button>
+    </footer>
+
+    <div class="toast-host" id="toastHost"></div>
+
+    <script>
+      /* ============================================================
+           TRACKING (FB, TT, GTM) 
+           ============================================================ */
+      let trackersLoaded = false;
+      function initTracking(tracking) {
+        if (!tracking || trackersLoaded) return;
+        // GTM
+        if (tracking.gtm_id) {
+          (function (w, d, s, l, i) {
+            w[l] = w[l] || [];
+            w[l].push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
+            var f = d.getElementsByTagName(s)[0],
+              j = d.createElement(s),
+              dl = l != "dataLayer" ? "&l=" + l : "";
+            j.async = true;
+            j.src = "https://www.googletagmanager.com/gtm.js?id=" + i + dl;
+            f.parentNode.insertBefore(j, f);
+          })(window, document, "script", "dataLayer", tracking.gtm_id);
+        }
+        // Facebook
+        if (tracking.pixel_id) {
+          !(function (f, b, e, v, n, t, s) {
+            if (f.fbq) return;
+            n = f.fbq = function () {
+              n.callMethod
+                ? n.callMethod.apply(n, arguments)
+                : n.queue.push(arguments);
+            };
+            if (!f._fbq) f._fbq = n;
+            n.push = n;
+            n.loaded = !0;
+            n.version = "2.0";
+            n.queue = [];
+            t = b.createElement(e);
+            t.async = !0;
+            t.src = v;
+            s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s);
+          })(
+            window,
+            document,
+            "script",
+            "https://connect.facebook.net/en_US/fbevents.js",
+          );
+          fbq("init", tracking.pixel_id);
+          fbq("track", "PageView");
+        }
+        // TikTok
+        if (tracking.tiktok_pixel) {
+          !(function (w, d, t) {
+            w.TiktokAnalyticsObject = t;
+            var ttq = (w[t] = w[t] || []);
+            ttq.methods = [
+              "page",
+              "track",
+              "identify",
+              "instances",
+              "debug",
+              "on",
+              "off",
+              "once",
+              "ready",
+              "alias",
+              "group",
+              "enableCookie",
+              "disableCookie",
+            ];
+            ttq.setAndDefer = function (t, e) {
+              t[e] = function () {
+                t.push([e].concat(Array.prototype.slice.call(arguments, 0)));
+              };
+            };
+            for (var i = 0; i < ttq.methods.length; i++)
+              ttq.setAndDefer(ttq, ttq.methods[i]);
+            ttq.instance = function (t) {
+              for (var e = ttq._i[t] || [], n = 0; n < ttq.methods.length; n++)
+                ttq.setAndDefer(e, ttq.methods[n]);
+              return e;
+            };
+            ttq.load = function (e, n) {
+              var i = "https://analytics.tiktok.com/i18n/pixel/events.js";
+              ((ttq._i = ttq._i || {}),
+                (ttq._i[e] = []),
+                (ttq._i[e]._u = i),
+                (ttq._t = ttq._t || {}),
+                (ttq._t[e] = +new Date()),
+                (ttq._o = ttq._o || {}),
+                (ttq._o[e] = n || {}));
+              var o = document.createElement("script");
+              ((o.type = "text/javascript"),
+                (o.async = !0),
+                (o.src = i + "?sdkid=" + e + "&lib=" + t));
+              var a = document.getElementsByTagName("script")[0];
+              a.parentNode.insertBefore(o, a);
+            };
+            ttq.load(tracking.tiktok_pixel);
+            ttq.page();
+          })(window, document, "ttq");
+        }
+        trackersLoaded = true;
+      }
+
+      /* ============================================================
+           ESTADO GLOBAL E UTILITÁRIOS
+           ============================================================ */
+      let PROJECT = null;
+      let CURRENT_STEP = 1;
+      let SELECTED_BUMPS = [];
+      let TRANSACTION_ID = null;
+      let PIX_END_TS = null;
+      let POLL_INTERVAL = null;
+      let PIX_TIMER_INTERVAL = null;
+      let MAIN_QTY = 1;
+
+      function fmtBRL(n) {
+        return Number(n)
+          .toFixed(2)
+          .replace(".", ",")
+          .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      }
+      function pad(n) {
+        return String(n).padStart(2, "0");
+      }
+      function esc(s) {
+        return String(s ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+      function toast(msg) {
+        const host = document.getElementById("toastHost");
+        const el = document.createElement("div");
+        el.className = "toast";
+        el.textContent = msg;
+        host.appendChild(el);
+        setTimeout(() => el.remove(), 2600);
+      }
+
+      /* Timer fake do TikTok para o botão */
+      setInterval(() => {
+        let el = document.getElementById("timerTxt");
+        if (!el) return;
+        let parts = el.innerText.split(":");
+        let s = parseInt(parts[2]) - 1;
+        let m = parseInt(parts[1]);
+        let h = parseInt(parts[0]);
+        if (s < 0) {
+          s = 59;
+          m--;
+        }
+        if (m < 0) {
+          m = 59;
+          h--;
+        }
+        if (h < 0) {
+          h = 0;
+          m = 0;
+          s = 0;
+        }
+        el.innerText = [h, m, s]
+          .map((x) => String(x).padStart(2, "0"))
+          .join(":");
+      }, 1000);
+
+      /* ============================================================
+           MÁSCARAS E BUSCA DE CEP (Integração de Entrega)
+           ============================================================ */
+      function maskInput(e, type) {
+        let v = e.target.value.replace(/\D/g, "");
+        if (type === "cpf") {
+          if (v.length > 9)
+            v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, "$1.$2.$3-$4");
+          else if (v.length > 6)
+            v = v.replace(/(\d{3})(\d{3})(\d{0,3})/, "$1.$2.$3");
+          else if (v.length > 3) v = v.replace(/(\d{3})(\d{0,3})/, "$1.$2");
+          v = v.slice(0, 14);
+        } else if (type === "phone") {
+          if (v.length > 10)
+            v = v.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+          else if (v.length > 6)
+            v = v.replace(/(\d{2})(\d{4,5})(\d{0,4})/, "($1) $2-$3");
+          else if (v.length > 2) v = v.replace(/(\d{2})(\d{0,5})/, "($1) $2");
+          else if (v.length) v = v.replace(/(\d{0,2})/, "($1");
+          v = v.slice(0, 15);
+        } else if (type === "cep") {
+          if (v.length > 5) v = v.replace(/(\d{5})(\d{0,3})/, "$1-$2");
+          v = v.slice(0, 9);
+        }
+        e.target.value = v;
+      }
+
+      document
+        .getElementById("inp-cpf")
+        .addEventListener("input", (e) => maskInput(e, "cpf"));
+      document
+        .getElementById("inp-phone")
+        .addEventListener("input", (e) => maskInput(e, "phone"));
+      document
+        .getElementById("inp-cep")
+        .addEventListener("input", (e) => maskInput(e, "cep"));
+
+      // API ViaCEP
+      document.getElementById("inp-cep").addEventListener("blur", async (e) => {
+        let cep = e.target.value.replace(/\D/g, "");
+        if (cep.length === 8) {
+          try {
+            let res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+            let data = await res.json();
+            if (!data.erro) {
+              document.getElementById("inp-street").value = data.logradouro;
+              document.getElementById("inp-hood").value = data.bairro;
+              document.getElementById("inp-city").value = data.localidade;
+              document.getElementById("inp-uf").value = data.uf;
+              document.getElementById("inp-num").focus();
+              ["inp-street", "inp-hood", "inp-city", "inp-uf"].forEach((id) =>
+                validateField(id),
+              );
+            }
+          } catch (e) {}
+        }
+        validateField("inp-cep");
+      });
+
+      function validateField(id) {
+        const el = document.getElementById(id);
+        const val = el.value.trim();
+        let ok = true;
+        if (id === "inp-name") ok = val.length >= 3 && val.includes(" ");
+        if (id === "inp-email") ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+        if (id === "inp-cpf") ok = val.replace(/\D/g, "").length === 11;
+        if (id === "inp-phone") ok = val.replace(/\D/g, "").length >= 10;
+        if (id === "inp-cep") ok = val.replace(/\D/g, "").length === 8;
+        if (
+          ["inp-street", "inp-num", "inp-hood", "inp-city", "inp-uf"].includes(
+            id,
+          )
+        )
+          ok = val.length > 0;
+
+        el.classList.toggle("error", !ok);
+        el.classList.toggle("ok", ok);
+        const errEl = document.getElementById(id.replace("inp-", "err-"));
+        if (errEl) errEl.classList.toggle("show", !ok);
+        return ok;
+      }
+
+      const requiredFields = [
+        "inp-name",
+        "inp-email",
+        "inp-cpf",
+        "inp-phone",
+        "inp-cep",
+        "inp-street",
+        "inp-num",
+        "inp-hood",
+        "inp-city",
+        "inp-uf",
+      ];
+      requiredFields.forEach((id) =>
+        document
+          .getElementById(id)
+          .addEventListener("blur", () => validateField(id)),
+      );
+
+      function validateAll() {
+        return requiredFields.every((f) => validateField(f));
+      }
+
+      /* ============================================================
+           INIT E RECEBIMENTO DO PROJECT
+           ============================================================ */
+      function renderProject(p) {
+        if (!p) return;
+        initTracking(p.tracking);
+        renderBumps(p.orderBumps || []);
+        updateTotal();
+
+        const b = p.basico || {};
+        document.getElementById("sumName").textContent = b.title || "—";
+        document.getElementById("sumPrice").textContent =
+          "R$ " + fmtBRL(Number(b.price || 0));
+        const imgs = b.images || [];
+        if (imgs[0]) {
+          document.getElementById("sumImg").src = imgs[0];
+          document.getElementById("sumImg").style.display = "";
+        }
+      }
+
+      window.addEventListener("message", (e) => {
+        if (!e.data || e.data.type !== "epro:update") return;
+        PROJECT = e.data.project;
+        renderProject(PROJECT);
+      });
+
+      document
+        .getElementById("stepQtyMinus")
+        .addEventListener("click", () => changeMainQty(-1));
+      document
+        .getElementById("stepQtyPlus")
+        .addEventListener("click", () => changeMainQty(1));
+
+      function changeMainQty(delta) {
+        MAIN_QTY = Math.max(1, Math.min(10, MAIN_QTY + delta));
+        document.getElementById("stepQtyVal").textContent = MAIN_QTY;
+        updateSummaryPrice();
+        updateTotal();
+      }
+
+      function updateSummaryPrice() {
+        const b = (PROJECT || {}).basico || {};
+        const unit = Number(b.price || 0);
+        document.getElementById("sumPrice").textContent =
+          "R$ " + fmtBRL(unit * MAIN_QTY);
+      }
+
+      // Carrega do LocalStorage na inicialização (caso não via iframe)
+      try {
+        if (window.EPRO) {
+          PROJECT = window.EPRO;
+        } else {
+          const raw = localStorage.getItem("epro_lp_project");
+          if (raw) PROJECT = JSON.parse(raw);
+        }
+        if (PROJECT) renderProject(PROJECT);
+      } catch (_) {}
+
+      function renderBumps(bumps) {
+        const section = document.getElementById("bumpSection");
+        const list = document.getElementById("bumpList");
+        if (!bumps || !bumps.length) {
+          section.style.display = "none";
+          return;
+        }
+        section.style.display = "";
+        list.innerHTML = bumps
+          .map(
+            (b, i) => `
+                <div class="bump-item" id="bump-${i}" onclick="toggleBump(${i})">
+                    <div class="bump-check">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    ${b.image ? `<img class="bump-img" src="${esc(b.image)}" alt="${esc(b.name)}">` : ""}
+                    <div class="bump-info">
+                        <div class="bump-name">${esc(b.name)}</div>
+                        <div class="bump-add-label">Adicionar ao pedido por</div>
+                        <div class="bump-add-price">+R$ ${fmtBRL(b.price || 0)}</div>
+                    </div>
+                </div>
+            `,
+          )
+          .join("");
+      }
+
+      function toggleBump(i) {
+        const idx = SELECTED_BUMPS.indexOf(i);
+        if (idx === -1) SELECTED_BUMPS.push(i);
+        else SELECTED_BUMPS.splice(idx, 1);
+        document
+          .getElementById("bump-" + i)
+          .classList.toggle("selected", SELECTED_BUMPS.includes(i));
+        updateTotal();
+      }
+
+      function updateTotal() {
+        if (!PROJECT) return 0;
+        const base = Number((PROJECT.basico || {}).price || 0) * MAIN_QTY;
+        const bumpsTotal = SELECTED_BUMPS.reduce(
+          (sum, i) => sum + Number((PROJECT.orderBumps || [])[i]?.price || 0),
+          0,
+        );
+        const total = base + bumpsTotal;
+        document.getElementById("footerTotal").textContent =
+          "R$ " + fmtBRL(total);
+        const itemCount = MAIN_QTY + SELECTED_BUMPS.length;
+        document.getElementById("footerItemLabel").textContent =
+          `(${itemCount} ${itemCount === 1 ? "item" : "itens"})`;
+
+        return total;
+      }
+      /* ============================================================
+           FLUXO E SUBMIT
+           ============================================================ */
+      document.getElementById("submitBtn").addEventListener("click", () => {
+        if (CURRENT_STEP === 1) {
+          if (!validateAll()) {
+            toast("Preencha os dados de entrega corretamente");
+            return;
+          }
+
+          // Popula o resumo no Step 2
+          document.getElementById("resume-name").textContent =
+            document.getElementById("inp-name").value;
+          document.getElementById("resume-address").textContent =
+            `${document.getElementById("inp-street").value}, ${document.getElementById("inp-num").value} - ${document.getElementById("inp-city").value}/${document.getElementById("inp-uf").value}`;
+          document.getElementById("resume-cpf").textContent =
+            `CPF: ${document.getElementById("inp-cpf").value}`;
+
+          setStep(2);
+          document.getElementById("btnText").textContent = "Fazer pedido";
+          window.scrollTo(0, 0);
+        } else if (CURRENT_STEP === 2) {
+          generatePIX();
+        }
+      });
+
+      function setStep(n) {
+        CURRENT_STEP = n;
+        [1, 2, 3].forEach((i) => {
+          const s = document.getElementById("step" + i);
+          s.classList.remove("active", "done");
+          if (i < n) s.classList.add("done");
+          else if (i === n) s.classList.add("active");
+        });
+        [1, 2].forEach((i) => {
+          const l = document.getElementById("line" + i);
+          if (l) l.classList.toggle("done", i < n);
+        });
+        document.getElementById("pageStep1").style.display =
+          n === 1 ? "" : "none";
+        document.getElementById("pageStep2").style.display =
+          n === 2 ? "" : "none";
+        document.getElementById("pageStep3").style.display =
+          n === 3 ? "" : "none";
+      }
+
+      /* ============================================================
+           GERAÇÃO DE PIX COM A SUA API ORIGINAL
+           ============================================================ */
+      async function generatePIX() {
+        const btn = document.getElementById("submitBtn");
+        btn.classList.add("loading");
+        btn.disabled = true;
+
+        const b = (PROJECT || {}).basico || {};
+        const bumps = (PROJECT || {}).orderBumps || [];
+        const total =
+          Number(b.price || 0) * MAIN_QTY +
+          SELECTED_BUMPS.reduce((s, i) => s + Number(bumps[i]?.price || 0), 0);
+
+        // Payload montado com todos os dados (incluindo o novo endereço caso você precise usar na API)
+        const payload = {
+          name: document.getElementById("inp-name").value.trim(),
+          email: document.getElementById("inp-email").value.trim(),
+          cpf: document.getElementById("inp-cpf").value.replace(/\D/g, ""),
+          phone: document.getElementById("inp-phone").value.replace(/\D/g, ""),
+          cep: document.getElementById("inp-cep").value.replace(/\D/g, ""),
+          street: document.getElementById("inp-street").value.trim(),
+          num: document.getElementById("inp-num").value.trim(),
+          comp: document.getElementById("inp-comp").value.trim(),
+          hood: document.getElementById("inp-hood").value.trim(),
+          city: document.getElementById("inp-city").value.trim(),
+          uf: document.getElementById("inp-uf").value.trim(),
+          amount: total,
+          product: b.title || "Produto",
+          bumps: SELECTED_BUMPS.map((i) => ({
+            name: bumps[i].name,
+            price: bumps[i].price,
+          })),
+        };
+
+        try {
+          // SSUA LÓGICA DE API RECUPERADA AQUI
+          const res = await fetch("api-pix.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+
+          if (data.success) {
+            TRANSACTION_ID = data.transaction_id;
+            showPIXStep(data.qrcode, total, data.qrcode_base64);
+
+            if (window.fbq)
+              fbq("track", "Purchase", {
+                content_name: b.title,
+                value: total,
+                currency: "BRL",
+              });
+            if (window.ttq)
+              ttq.track("PlaceAnOrder", {
+                contents: [
+                  { content_name: b.title, price: total, currency: "BRL" },
+                ],
+              });
+          } else {
+            toast(data.message || "Erro ao gerar PIX. Tente novamente.");
+            btn.classList.remove("loading");
+            btn.disabled = false;
+          }
+        } catch (err) {
+          toast("Erro de conexão com o servidor.");
+          btn.classList.remove("loading");
+          btn.disabled = false;
+        }
+      }
+
+      function showPIXStep(qrcode, total, qrcodeBase64) {
+        setStep(3);
+        document.getElementById("stickyFooter").style.display = "none";
+        document.getElementById("pixCodeText").textContent = qrcode;
+
+        // --- INÍCIO DA CORREÇÃO DO QR CODE ---
+        let qrUrl = "";
+        // Verifica se tem base64 e se não é nulo
+        if (qrcodeBase64 && qrcodeBase64 !== "null") {
+          // Se a API já enviar com o prefixo 'data:image', evita duplicar a string
+          qrUrl = qrcodeBase64.startsWith("data:image")
+            ? qrcodeBase64
+            : "data:image/png;base64," + qrcodeBase64;
+        } else {
+          // Trocado qrserver por quickchart (muito mais robusto para PIX longo)
+          qrUrl =
+            "https://quickchart.io/qr?size=200&text=" +
+            encodeURIComponent(qrcode);
+        }
+
+        document.getElementById("pixQrImg").src = qrUrl;
+        // --- FIM DA CORREÇÃO ---
+
+        document.getElementById("pixBlock").classList.add("show");
+        PIX_END_TS = Date.now() + (23 * 3600 + 59 * 60 + 47) * 1000;
+
+        startPIXTimer();
+        startPolling();
+      }
+
+      function startPIXTimer() {
+        function tick() {
+          const diff = Math.max(
+            0,
+            Math.floor((PIX_END_TS - Date.now()) / 1000),
+          );
+          const h = Math.floor(diff / 3600),
+            m = Math.floor((diff % 3600) / 60),
+            s = diff % 60;
+          document.getElementById("pixTimer").textContent =
+            pad(h) + ":" + pad(m) + ":" + pad(s);
+          if (diff > 0) PIX_TIMER_INTERVAL = setTimeout(tick, 1000);
+        }
+        tick();
+      }
+
+      document.getElementById("pixCopyBtn").addEventListener("click", () => {
+        const code = document.getElementById("pixCodeText").textContent;
+        navigator.clipboard
+          ?.writeText(code)
+          .then(() => {
+            toast("Código Pix copiado!");
+            const btn = document.getElementById("pixCopyBtn");
+            btn.innerHTML = "✓ Copiado com sucesso!";
+            setTimeout(() => {
+              btn.innerHTML =
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código PIX';
+            }, 2500);
+          })
+          .catch(() => {
+            const el = document.createElement("textarea");
+            el.value = code;
+            el.style.cssText = "position:fixed;opacity:0";
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand("copy");
+            document.body.removeChild(el);
+            toast("Código Pix copiado!");
+          });
+      });
+
+      // Polling Original Recuperado
+      function startPolling() {
+        if (!TRANSACTION_ID) return;
+        POLL_INTERVAL = setInterval(async () => {
+          try {
+            const res = await fetch(
+              "check-payment.php?transaction_id=" +
+                encodeURIComponent(TRANSACTION_ID),
+            );
+            const data = await res.json();
+            if (data.status === "paid") {
+              clearInterval(POLL_INTERVAL);
+              clearTimeout(PIX_TIMER_INTERVAL);
+              showPaid();
+            }
+          } catch (_) {}
+        }, 5000);
+      }
+
+      function showPaid() {
+        document.getElementById("pixBlock").classList.remove("show");
+        document.getElementById("paidBlock").classList.add("show");
+        toast("Pagamento confirmado!");
+      }
+    </script>
+  </body>
+</html>

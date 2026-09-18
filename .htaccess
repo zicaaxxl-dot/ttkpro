@@ -1,0 +1,127 @@
+# ========================================
+# HTACCESS - 
+# Sistema de Pagamento PIX
+# ========================================
+
+# ========================================
+# OCULTAR EXTENSÃO .PHP DAS URLS
+# ========================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Se a URL solicitada não for um diretório válido
+    RewriteCond %{REQUEST_FILENAME} !-d
+    # E se o arquivo com a extensão .php existir no servidor
+    RewriteCond %{REQUEST_FILENAME}\.php -f
+    # Faça a reescrita invisível adicionando o .php no final
+    RewriteRule ^([^\.]+)/?$ $1.php [L]
+</IfModule>
+
+# ========================================
+# Proteção de Arquivos Sensíveis
+# ========================================
+<FilesMatch "(config\.php|\.log|\.json)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Libera bots.json para ser lido pelo browser (usado pelas notificações)
+<Files "bots.json">
+    Order Allow,Deny
+    Allow from all
+</Files>
+
+# Bloquear acesso direto à pasta de pagamentos
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^payments/ - [F,L]
+</IfModule>
+
+# Bloquear download de arquivos de sistema e backups
+<FilesMatch "(config\.php|\.log|\.json|\.zip|\.bak)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Desabilitar listagem de diretórios
+Options -Indexes
+
+# ========================================
+# PROTEÇÃO CONTRA HOTLINKING DE IMAGENS
+# ========================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Permitir acesso direto (aba anônima)
+    RewriteCond %{HTTP_REFERER} !^$
+    
+    # Permitir acesso do próprio domínio (dinâmico)
+    RewriteCond %{HTTP_REFERER} !^https?://(www\.)?%{HTTP_HOST} [NC]
+    
+    # Bloquear o resto
+    RewriteRule \.(jpg|jpeg|png|gif|webp|mp4)$ - [F]
+</IfModule>
+
+# ========================================
+# PERFORMANCE E OTIMIZAÇÃO
+# ========================================
+# Habilitar CORS para API
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "POST, GET, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type"
+</IfModule>
+
+# Compressão GZIP
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# Cache de Arquivos Estáticos
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType video/mp4 "access plus 1 year"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+</IfModule>
+
+# ========================================
+# SEGURANÇA ADICIONAL
+# ========================================
+# Headers de Segurança
+<IfModule mod_headers.c>
+    # Prevenir clickjacking
+    Header set X-Frame-Options "SAMEORIGIN"
+    
+    # Prevenir MIME sniffing
+    Header set X-Content-Type-Options "nosniff"
+    
+    # Habilitar XSS protection
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# ========================================
+# PÁGINAS DE ERRO PERSONALIZADAS
+# ========================================
+ErrorDocument 404 /404.html
+ErrorDocument 403 /403.html
+ErrorDocument 500 /500.html
+
+# ========================================
+# FORÇAR HTTPS (DESCOMENTE QUANDO TIVER SSL)
+# ========================================
+# <IfModule mod_rewrite.c>
+#     RewriteEngine On
+#     RewriteCond %{HTTPS} off
+#     RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# </IfModule>
+# Bloquear dump SQL
+<FilesMatch "\.(sql)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>

@@ -1,0 +1,13 @@
+payments/pending/*.json
+!payments/pending/.gitkeep
+
+payments/paid/*.json
+!payments/paid/.gitkeep
+
+*.log
+
+# Deploy / local
+.env
+.env.*
+!.env.example
+docker-data/

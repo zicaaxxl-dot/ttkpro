@@ -1,0 +1,51 @@
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f9fafb;
+}
+
+.card {
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.input-field {
+    width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
+    color: #111827;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.input-field:focus {
+    border-color: #111827;
+    box-shadow: 0 0 0 1px #111827;
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#sidebar {
+    transition: width 0.3s ease, padding 0.3s ease;
+}
