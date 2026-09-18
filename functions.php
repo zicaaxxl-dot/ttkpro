@@ -94,6 +94,19 @@ function ensureProjectTablesSchema(): void
         "ALTER TABLE recommendations MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
         "ALTER TABLE recommendation_variations ADD PRIMARY KEY (id)",
         "ALTER TABLE recommendation_variations MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
+        "ALTER TABLE project_images MODIFY url TEXT NOT NULL",
+        "ALTER TABLE order_bumps MODIFY image TEXT NULL",
+        "ALTER TABLE order_bumps MODIFY description TEXT NULL",
+        "ALTER TABLE reviews MODIFY image TEXT NULL",
+        "ALTER TABLE reviews MODIFY text MEDIUMTEXT NULL",
+        "ALTER TABLE variation_options MODIFY image TEXT NULL",
+        "ALTER TABLE variation_options MODIFY checkout_url TEXT NULL",
+        "ALTER TABLE recommendations MODIFY image TEXT NULL",
+        "ALTER TABLE recommendations MODIFY checkout_url TEXT NULL",
+        "ALTER TABLE recommendation_variations MODIFY image TEXT NULL",
+        "ALTER TABLE recommendation_variations MODIFY checkout_url TEXT NULL",
+        "ALTER TABLE projects MODIFY footer_pol TEXT NULL",
+        "ALTER TABLE projects MODIFY footer_term TEXT NULL",
     ];
     foreach ($statements as $sql) {
         try {
@@ -183,7 +196,7 @@ function saveProject(array $data): int
         $imgStmt = $pdo->prepare("INSERT INTO project_images (project_id, url, sort_order) VALUES (?, ?, ?)");
         foreach (($basico['images'] ?? []) as $i => $url) {
             if (trim($url) !== '')
-                $imgStmt->execute([$projectId, $url, $i]);
+                $imgStmt->execute([$projectId, clipDbText($url), $i]);
         }
 
         // --- order bumps ---
@@ -198,8 +211,8 @@ function saveProject(array $data): int
                 $b['name'] ?? '',
                 $b['price'] ?? 0,
                 $b['price_original'] ?? 0,
-                $b['description'] ?? '',
-                $b['image'] ?? '',
+                clipDbText($b['description'] ?? ''),
+                clipDbText($b['image'] ?? ''),
                 $i,
             ]);
         }
@@ -215,8 +228,8 @@ function saveProject(array $data): int
                 $projectId,
                 $r['name'] ?? '',
                 $r['stars'] ?? 5,
-                $r['text'] ?? '',
-                $r['image'] ?? '',
+                clipDbText($r['text'] ?? ''),
+                clipDbText($r['image'] ?? ''),
                 $i,
             ]);
         }
@@ -236,8 +249,8 @@ function saveProject(array $data): int
                     $groupId,
                     $opt['value'] ?? '',
                     $opt['price'] ?? 0,
-                    $opt['image'] ?? '',
-                    $opt['checkout_url'] ?? '',
+                    clipDbText($opt['image'] ?? ''),
+                    clipDbText($opt['checkout_url'] ?? ''),
                     $oi,
                 ]);
             }
@@ -258,8 +271,8 @@ function saveProject(array $data): int
                 $projectId,
                 $rec['title'] ?? '',
                 $rec['price'] ?? 0,
-                $rec['image'] ?? '',
-                $rec['checkout_url'] ?? '',
+                clipDbText($rec['image'] ?? ''),
+                clipDbText($rec['checkout_url'] ?? ''),
                 $rec['variation_name'] ?? 'Modelo',
                 $ri,
             ]);
@@ -269,8 +282,8 @@ function saveProject(array $data): int
                     $recId,
                     $v['value'] ?? '',
                     $v['price'] ?? 0,
-                    $v['image'] ?? '',
-                    $v['checkout_url'] ?? '',
+                    clipDbText($v['image'] ?? ''),
+                    clipDbText($v['checkout_url'] ?? ''),
                     $vi,
                 ]);
             }
@@ -405,6 +418,19 @@ function getProjectFull(int $projectId): ?array
     ];
 }
 
+
+/** Limita texto longo antes de gravar (seguranca extra). */
+function clipDbText($value, int $max = 65000): string
+{
+    $s = (string) ($value ?? '');
+    if ($s === '') {
+        return '';
+    }
+    if (function_exists('mb_substr')) {
+        return mb_substr($s, 0, $max);
+    }
+    return substr($s, 0, $max);
+}
 
 /** Gera slug amigavel a partir do nome do projeto. */
 function slugifyProjectName(string $name): string
