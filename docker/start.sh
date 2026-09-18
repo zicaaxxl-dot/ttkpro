@@ -69,6 +69,9 @@ mysql -u root "${DB_NAME}" <<'EOSQL' || true
 ALTER TABLE projects ADD PRIMARY KEY (id);
 ALTER TABLE projects MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT;
 ALTER TABLE projects ADD UNIQUE KEY uniq_project_name (name);
+ALTER TABLE projects MODIFY external_link TEXT NULL;
+ALTER TABLE projects MODIFY shop_avatar TEXT NULL;
+ALTER TABLE projects MODIFY description MEDIUMTEXT NULL;
 ALTER TABLE project_images ADD PRIMARY KEY (id);
 ALTER TABLE project_images MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT;
 ALTER TABLE order_bumps ADD PRIMARY KEY (id);
