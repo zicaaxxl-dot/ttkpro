@@ -793,6 +793,8 @@ $titulo = 'Visão Geral - ttkpro';
         <div class="header-center">Editor de Produto PRO</div>
         <div class="header-right">
             <span class="header-user">Bem vindo de volta, Admin</span>
+            <a href="produtos.php" class="btn btn-ghost"
+                style="font-size:12px;padding:7px 14px;text-decoration:none;margin-right:8px;border:1px solid #e5e7eb;">Produtos</a>
             <a href="vendas.php" class="btn btn-ghost"
                 style="font-size:12px;padding:7px 14px;text-decoration:none;margin-right:8px;border:1px solid #e5e7eb;">Vendas</a>
             <a href="logout.php" class="btn btn-black"
@@ -810,8 +812,12 @@ $titulo = 'Visão Geral - ttkpro';
                 <div class="card-title-header">Editor de Conteúdo</div>
                 <label style="font-size:13px;font-weight:700;margin-bottom:10px;display:block">Gerenciamento de
                     Projetos</label>
+                <p style="font-size:12px;color:#6b7280;margin-bottom:10px;line-height:1.45">
+                    Fonte da verdade: <strong>servidor</strong> (banco persistente).
+                    <a href="produtos.php" style="color:#2563eb;font-weight:600">Ver todos os produtos →</a>
+                </p>
                 <button id="btnSaveProject" class="btn btn-black" style="margin-bottom:10px;width:100%">💾 Salvar no
-                    Navegador</button>
+                    Servidor</button>
                 <select id="projectSelect" class="input-select" style="margin-bottom:10px"></select>
                 <div class="proj-row">
                     <button class="btn btn-red" id="btnDeleteProject">Excluir</button>
@@ -1203,11 +1209,15 @@ $titulo = 'Visão Geral - ttkpro';
                     body: JSON.stringify({ ...project, activate })
                 });
                 const result = await res.json();
-                if (!result.success) toast('❌ Falha ao salvar projeto no servidor.', 'error');
-                return result.success;
+                if (!result.success) {
+                    toast('❌ Falha ao salvar projeto no servidor.', 'error');
+                    return null;
+                }
+                if (result.id) project.id = result.id;
+                return result;
             } catch (e) {
                 toast('❌ Erro de conexão ao salvar projeto.', 'error');
-                return false;
+                return null;
             }
         }
 
@@ -1216,6 +1226,8 @@ $titulo = 'Visão Geral - ttkpro';
 
             const STORAGE_INDEX_KEY = 'epro_projects_index';
             const STORAGE_PROJECT_PREFIX = 'epro_project_';
+            /** Cache da lista do servidor: [{id,name,title,is_active,...}] */
+            let serverProjects = [];
 
             function emptyProject(name) {
                 return {
@@ -1739,7 +1751,7 @@ $titulo = 'Visão Geral - ttkpro';
                 renderRecommendations();
             };
 
-            /* ═══ PERSISTENCE ═══ */
+            /* ═══ PERSISTENCE (servidor = fonte da verdade) ═══ */
             function esc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
             function escHtml(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
             function fmtBRL(n) { return Number(n).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
@@ -1747,57 +1759,120 @@ $titulo = 'Visão Geral - ttkpro';
             function setIndex(list) { localStorage.setItem(STORAGE_INDEX_KEY, JSON.stringify(list)); }
             function projectKey(name) { return STORAGE_PROJECT_PREFIX + name; }
 
+            function cacheProjectLocal() {
+                try {
+                    localStorage.setItem(projectKey(project.name), JSON.stringify(project));
+                    localStorage.setItem('epro_lp_project', JSON.stringify(project));
+                    const idx = getIndex();
+                    if (!idx.includes(project.name)) { idx.push(project.name); setIndex(idx); }
+                } catch (_) { }
+            }
+
             function refreshProjectSelect() {
                 const select = $('projectSelect');
                 select.innerHTML = '';
-                getIndex().forEach(name => {
+                if (!serverProjects.length) {
                     const opt = document.createElement('option');
-                    opt.value = name; opt.textContent = name;
-                    if (name === project.name) opt.selected = true;
+                    opt.value = '';
+                    opt.textContent = project.name ? (project.name + ' (rascunho)') : 'Nenhum produto no servidor';
+                    select.appendChild(opt);
+                    return;
+                }
+                serverProjects.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = String(p.id);
+                    const mark = p.is_active ? ' ★' : '';
+                    opt.textContent = (p.title || p.name) + mark;
+                    if (project.id && Number(project.id) === Number(p.id)) opt.selected = true;
+                    else if (!project.id && p.name === project.name) opt.selected = true;
                     select.appendChild(opt);
                 });
             }
 
-            $('btnSaveProject').onclick = () => {
-                syncFormToProject();
-                localStorage.setItem(projectKey(project.name), JSON.stringify(project));
-                localStorage.setItem('epro_lp_project', JSON.stringify(project));
-                const idx = getIndex();
-                if (!idx.includes(project.name)) { idx.push(project.name); setIndex(idx); }
+            async function fetchServerProjects() {
+                try {
+                    const res = await fetch('list_projects.php');
+                    const data = await res.json();
+                    if (data.success && Array.isArray(data.projects)) {
+                        serverProjects = data.projects;
+                    }
+                } catch (_) { }
                 refreshProjectSelect();
-                toast(`Projeto "${project.name}" salvo!`, 'success');
-                pushProjectToServer(true);
+            }
+
+            async function loadProjectFromServer(id) {
+                const res = await fetch('get_project.php?id=' + encodeURIComponent(id));
+                const data = await res.json();
+                if (!data.success || !data.project) {
+                    toast(data.message || 'Produto nao encontrado no servidor.', 'error');
+                    return false;
+                }
+                const merged = { ...emptyProject(data.project.name), ...data.project };
+                if (!merged.gateway) merged.gateway = { provider: 'pixzy', public_key: '', secret_key: '' };
+                setProject(merged);
+                syncProjectToForm();
+                cacheProjectLocal();
+                refreshProjectSelect();
+                return true;
+            }
+
+            $('btnSaveProject').onclick = async () => {
+                syncFormToProject();
+                const result = await pushProjectToServer(false);
+                if (!result) return;
+                cacheProjectLocal();
+                await fetchServerProjects();
+                toast(`Projeto "${project.name}" salvo no servidor!`, 'success');
             };
 
             $('btnNewProject').onclick = () => {
                 const name = prompt('Nome do novo projeto:', 'novo-produto');
                 if (!name || !name.trim()) return;
                 setProject(emptyProject(name.trim()));
-                syncProjectToForm();
-                const idx = getIndex();
-                if (!idx.includes(project.name)) { idx.push(project.name); setIndex(idx); }
-                refreshProjectSelect();
-                toast(`Projeto "${project.name}" criado.`, 'success');
-            };
-
-            $('projectSelect').onchange = e => {
-                const raw = localStorage.getItem(projectKey(e.target.value));
-                if (!raw) return;
-                setProject(JSON.parse(raw));
-                syncProjectToForm();
-                toast('Projeto carregado.');
-            };
-
-            $('btnDeleteProject').onclick = () => {
-                if (!confirm(`Excluir "${project.name}"?`)) return;
-                localStorage.removeItem(projectKey(project.name));
-                setIndex(getIndex().filter(n => n !== project.name));
-                const remaining = getIndex();
-                const loaded = remaining.length ? JSON.parse(localStorage.getItem(projectKey(remaining[0])) || '{}') : emptyProject('novo-projeto');
-                setProject(loaded && loaded.name ? loaded : emptyProject('novo-projeto'));
+                project.id = null;
                 syncProjectToForm();
                 refreshProjectSelect();
-                toast('Excluído.', 'success');
+                toast(`Projeto "${project.name}" criado (ainda nao salvo no servidor).`, 'success');
+            };
+
+            $('projectSelect').onchange = async e => {
+                const id = e.target.value;
+                if (!id) return;
+                toast('Carregando do servidor...');
+                const ok = await loadProjectFromServer(id);
+                if (ok) toast('Produto carregado do servidor.', 'success');
+            };
+
+            $('btnDeleteProject').onclick = async () => {
+                if (!project.id) {
+                    toast('Este rascunho ainda nao esta no servidor.', 'error');
+                    return;
+                }
+                if (!confirm(`Excluir "${project.name}" do servidor?`)) return;
+                try {
+                    const res = await fetch('delete_project.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: Number(project.id) })
+                    });
+                    const data = await res.json();
+                    if (!data.success) {
+                        toast(data.message || 'Falha ao excluir', 'error');
+                        return;
+                    }
+                    try { localStorage.removeItem(projectKey(project.name)); } catch (_) { }
+                    await fetchServerProjects();
+                    if (serverProjects.length) {
+                        await loadProjectFromServer(serverProjects[0].id);
+                    } else {
+                        setProject(emptyProject('novo-projeto'));
+                        syncProjectToForm();
+                        refreshProjectSelect();
+                    }
+                    toast('Excluído do servidor.', 'success');
+                } catch (_) {
+                    toast('Erro de conexao ao excluir.', 'error');
+                }
             };
 
             $('btnExportJson').onclick = () => {
@@ -1819,20 +1894,18 @@ $titulo = 'Visão Geral - ttkpro';
                     try {
                         const imported = JSON.parse(reader.result);
                         const merged = { ...emptyProject(imported.name || 'importado'), ...imported };
-                        // Migra formato antigo de variações
                         if (merged.variations && !merged.variationGroups) {
                             merged.variationGroups = merged.variations.options?.length
                                 ? [{ name: merged.variations.name || 'Modelo', options: merged.variations.options }]
                                 : [];
                             delete merged.variations;
                         }
+                        delete merged.id;
                         setProject(merged);
-                        localStorage.setItem(projectKey(project.name), JSON.stringify(project));
-                        const idx = getIndex();
-                        if (!idx.includes(project.name)) { idx.push(project.name); setIndex(idx); }
+                        cacheProjectLocal();
                         refreshProjectSelect();
                         syncProjectToForm();
-                        toast('Importado!', 'success');
+                        toast('Importado! Clique em Salvar no Servidor.', 'success');
                     } catch (err) { toast('JSON inválido.', 'error'); }
                 };
                 reader.readAsText(file);
@@ -1847,6 +1920,11 @@ $titulo = 'Visão Geral - ttkpro';
                 btn.innerHTML = '<span class="spin">⏳</span> Publicando...';
                 btn.style.pointerEvents = 'none'; btn.style.opacity = '.7';
                 try {
+                    const saved = await pushProjectToServer(true);
+                    if (!saved) {
+                        toast('Salve o produto no servidor antes de publicar.', 'error');
+                        return;
+                    }
                     const res = await fetch('publish.php', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1854,6 +1932,7 @@ $titulo = 'Visão Geral - ttkpro';
                     });
                     const data = await res.json();
                     if (res.ok && data.success) {
+                        if (data.id) project.id = data.id;
                         box.style.display = 'block';
                         box.innerHTML = '✅ Pagina no ar:<br><a href="' + data.url + '" target="_blank" rel="noopener">' + data.url + '</a>'
                             + '<br><button type="button" class="btn btn-ghost mt-8" id="btnCopyPublishUrl" style="margin-top:8px">📋 Copiar link</button>';
@@ -1862,6 +1941,7 @@ $titulo = 'Visão Geral - ttkpro';
                             navigator.clipboard?.writeText(data.url).then(() => toast('Link copiado!', 'success'));
                         };
                         toast('Pagina publicada!', 'success');
+                        await fetchServerProjects();
                         try { window.open(data.url, '_blank'); } catch (_) {}
                     } else {
                         toast((data && data.debug) ? (data.message + ': ' + data.debug) : ((data && data.message) ? data.message : 'Falha ao publicar'), 'error');
@@ -1895,18 +1975,27 @@ $titulo = 'Visão Geral - ttkpro';
             };
 
             /* ── INIT ── */
-            (function init() {
-                const idx = getIndex();
-                if (idx.length) {
-                    const saved = localStorage.getItem(projectKey(idx[0]));
-                    setProject(saved ? JSON.parse(saved) : emptyProject(idx[0]));
+            (async function init() {
+                await fetchServerProjects();
+                const params = new URLSearchParams(window.location.search);
+                const editId = params.get('id');
+                if (editId) {
+                    const ok = await loadProjectFromServer(editId);
+                    if (!ok && serverProjects.length) await loadProjectFromServer(serverProjects[0].id);
+                } else if (serverProjects.length) {
+                    await loadProjectFromServer(serverProjects[0].id);
                 } else {
-                    setIndex([project.name]);
-                    setProject(project); // garante window.appProject mesmo no primeiro load
-                    localStorage.setItem(projectKey(project.name), JSON.stringify(project));
+                    const idx = getIndex();
+                    if (idx.length) {
+                        const saved = localStorage.getItem(projectKey(idx[0]));
+                        setProject(saved ? JSON.parse(saved) : emptyProject(idx[0]));
+                    } else {
+                        setProject(project);
+                    }
+                    syncProjectToForm();
+                    refreshProjectSelect();
                 }
-                refreshProjectSelect();
-                syncProjectToForm();
+                syncGatewayAuthFields();
             })();
 
             window.appSyncFormToProject = syncFormToProject;

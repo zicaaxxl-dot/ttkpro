@@ -1,32 +1,41 @@
 <?php
 /**
- * save_project.php
- * Endpoint chamado pelo admin.php ao clicar em "Salvar" / "Baixar Site".
- * Persiste o projeto inteiro no banco (além do localStorage, que continua
- * funcionando como cache local/offline).
+ * save_project.php — persiste o projeto no banco (fonte da verdade no plano pago).
  */
+ob_start();
+ini_set('display_errors', '0');
 header('Content-Type: application/json; charset=utf-8');
-require_once __DIR__ . '/functions.php';
-
-$data = json_decode(file_get_contents('php://input'), true);
-if (!is_array($data) || empty($data['name'])) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Payload de projeto inválido.']);
-    exit;
-}
 
 try {
+    require_once __DIR__ . '/includes/config.php';
+    require_once __DIR__ . '/functions.php';
+    requireLogin();
+
+    $data = json_decode(file_get_contents('php://input'), true);
+    if (!is_array($data) || empty($data['name'])) {
+        ob_end_clean();
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Payload de projeto inválido.']);
+        exit;
+    }
+
     $projectId = saveProject($data);
 
-    // Se o admin marcar este projeto como o que deve ir ao ar, o front
-    // pode mandar "activate": true junto no mesmo payload.
     if (!empty($data['activate'])) {
         setActiveProject($projectId);
     }
 
-    echo json_encode(['success' => true, 'id' => $projectId]);
+    $slug = slugifyProjectName((string) $data['name']);
+    ob_end_clean();
+    echo json_encode([
+        'success' => true,
+        'id' => $projectId,
+        'slug' => $slug,
+        'url' => '/p/' . $slug,
+    ]);
 } catch (Throwable $e) {
     error_log('[ttkpro] save_project: ' . $e->getMessage());
+    ob_end_clean();
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Erro ao salvar projeto.']);
+    echo json_encode(['success' => false, 'message' => 'Erro ao salvar projeto.', 'debug' => $e->getMessage()]);
 }

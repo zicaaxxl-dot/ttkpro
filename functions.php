@@ -343,14 +343,63 @@ function setActiveProject(int $projectId): bool
 /** Lista todos os projetos (id + name), para popular o <select> do admin. */
 function listProjects(): array
 {
-    return db()->query("SELECT id, name, is_active FROM projects ORDER BY updated_at DESC")->fetchAll();
+    ensureProjectTablesSchema();
+    $rows = db()->query(
+        "SELECT id, name, title, is_active, price, updated_at, created_at
+         FROM projects
+         ORDER BY updated_at DESC"
+    )->fetchAll() ?: [];
+
+    foreach ($rows as &$row) {
+        $row['id'] = (int) $row['id'];
+        $row['is_active'] = (int) $row['is_active'];
+        $row['price'] = (float) $row['price'];
+        $row['slug'] = slugifyProjectName((string) $row['name']);
+        $row['url'] = '/p/' . $row['slug'];
+    }
+    unset($row);
+
+    return $rows;
 }
 
-/** Remove um projeto e (por CASCADE) todos os dados filhos dele. */
+/** Remove um projeto e todos os dados filhos dele. */
 function deleteProject(int $projectId): bool
 {
-    $stmt = db()->prepare("DELETE FROM projects WHERE id = ?");
-    return $stmt->execute([$projectId]);
+    ensureProjectTablesSchema();
+    $pdo = db();
+    $pdo->beginTransaction();
+    try {
+        // Sem FK CASCADE no dump original — limpa filhos na mao
+        $recIds = $pdo->prepare('SELECT id FROM recommendations WHERE project_id = ?');
+        $recIds->execute([$projectId]);
+        foreach ($recIds->fetchAll() as $r) {
+            $pdo->prepare('DELETE FROM recommendation_variations WHERE recommendation_id = ?')->execute([(int) $r['id']]);
+        }
+
+        $grpIds = $pdo->prepare('SELECT id FROM variation_groups WHERE project_id = ?');
+        $grpIds->execute([$projectId]);
+        foreach ($grpIds->fetchAll() as $g) {
+            $pdo->prepare('DELETE FROM variation_options WHERE group_id = ?')->execute([(int) $g['id']]);
+        }
+
+        foreach ([
+            'project_images',
+            'order_bumps',
+            'reviews',
+            'variation_groups',
+            'recommendations',
+        ] as $table) {
+            $pdo->prepare("DELETE FROM {$table} WHERE project_id = ?")->execute([$projectId]);
+        }
+
+        $pdo->prepare('DELETE FROM projects WHERE id = ?')->execute([$projectId]);
+        $pdo->commit();
+        return true;
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        error_log('[ttkpro] deleteProject: ' . $e->getMessage());
+        return false;
+    }
 }
 
 /**
@@ -360,6 +409,7 @@ function deleteProject(int $projectId): bool
  */
 function getProjectFull(int $projectId): ?array
 {
+    ensureProjectTablesSchema();
     $pdo = db();
 
     $p = $pdo->prepare("SELECT * FROM projects WHERE id = ?");
@@ -402,8 +452,12 @@ function getProjectFull(int $projectId): ?array
         ];
     }
 
+    $gw = getGatewaySettings();
+
     return [
+        'id' => (int) $row['id'],
         'name' => $row['name'],
+        'is_active' => (int) $row['is_active'] === 1,
         'basico' => [
             'badge' => $row['badge'],
             'title' => $row['title'],
@@ -416,6 +470,11 @@ function getProjectFull(int $projectId): ?array
             'external_link' => $row['external_link'],
             'shop_name' => $row['shop_name'],
             'shop_avatar' => $row['shop_avatar'],
+        ],
+        'gateway' => [
+            'provider' => $gw['provider'] ?? 'pixzy',
+            'public_key' => $gw['public_key'] ?? '',
+            'secret_key' => $gw['secret_key'] ?? '',
         ],
         'tracking' => [
             'pixel_id' => $row['pixel_id'],

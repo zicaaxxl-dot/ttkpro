@@ -1,87 +1,57 @@
-﻿# TTKPro — deploy no Render (modo simples)
+﻿# TTKPro — deploy no Render (plano pago + disco persistente)
 
-Site PHP + **MariaDB dentro do mesmo container**. Não precisa criar MySQL à parte.
+Site PHP + **MariaDB no mesmo container**, com dados em disco persistente (`/var/data`).
 
-> Aviso: no plano free do Render o disco é temporário. Se o serviço reiniciar, o banco pode voltar vazio e o SQL é reimportado automaticamente.
+## Persistencia (importante)
 
-## O que tem neste projeto
+No plano pago, o `render.yaml` anexa um **disco** em `/var/data`:
 
-- App principal (`ttkpro-app`)
-- `database-v1.6.sql` (import automático na 1ª subida)
-- `Dockerfile` (PHP 8.2 + Apache + MariaDB)
+- Banco MariaDB → `/var/data/mysql`
+- Arquivos de pagamento → `/var/data/payments`
 
-## Passo a passo no Render (GitHub)
+Assim produto/pagina **nao somem** no redeploy. Sem o disco, o container volta limpo.
 
-### 1) Conta e GitHub
+### Se o servico ja existia no Render
 
-1. Crie conta em [https://render.com](https://render.com)
-2. Crie um repositório no GitHub (ex.: `ttkpro`)
-3. Envie **esta pasta** `C:\Users\Crime é bom\ttkpro` para o repositório
+1. Confirme o plano **Standard** (ou superior)
+2. Em **Disks** do servico: monte disco em `/var/data` (min. 1–5 GB) **ou** sincronize o Blueprint (`render.yaml`)
+3. Redeploy
+4. **Publique de novo** os produtos (dados do plano free nao migram sozinhos)
 
-Se não tiver Git instalado no PC:
+## Paginas uteis
 
-- Instale: [https://git-scm.com/download/win](https://git-scm.com/download/win)
-- Ou use o site do GitHub → **Upload files** e arraste os arquivos da pasta (exceto pastas enormes se der problema; `vendor` precisa ir junto).
+| URL | Funcao |
+|-----|--------|
+| `/login` | Login (`admin` / senha do env ou `admin123`) |
+| `/admin` | Editor (salvar + publicar) |
+| `/produtos` | Listar / editar / excluir produtos do servidor |
+| `/vendas` | Vendas PIX |
+| `/p/{slug}` | Pagina publica do produto |
 
-### 2) Criar o serviço
+## Fluxo recomendado
 
-1. No Render: **New** → **Web Service**
-2. Conecte o repositório `ttkpro`
-3. Configure:
-   - **Runtime:** Docker
-   - **Branch:** main (ou master)
-   - **Plan:** Free
-4. Clique em **Create Web Service**
-5. Espere o build (pode levar vários minutos na 1ª vez)
+1. Login → **Produtos** ou **Editor**
+2. Criar/editar → **Salvar no Servidor**
+3. **Publicar Pagina** → link `/p/...` fica no ar
+4. Para editar depois: **Produtos** → **Editar**
 
-### 3) Abrir o site
+## Variaveis de ambiente
 
-Quando ficar **Live**, abra a URL tipo:
-
-`https://ttkpro-xxxx.onrender.com`
-
-Páginas úteis:
-
-- `/` ou `/index.php` — entrada
-- `/login.php` — login do painel
-- `/admin.php` — admin de produtos/gateway
-
-### 4) Senhas
-
-O dump SQL veio com usuários do desenvolvedor. No painel do app, **troque as senhas** assim que conseguir entrar.
-
-Se não souber a senha do `admin` do SQL, peça ao dev ou me avise que eu gero um hash novo e atualizo o dump.
-
-Variáveis de ambiente (já no `render.yaml`):
-
-| Variável | Função |
+| Variavel | Funcao |
 |----------|--------|
-| `DB_HOST` | `127.0.0.1` (MariaDB local no container) |
+| `DB_HOST` | `127.0.0.1` |
 | `DB_USER` / `DB_PASS` / `DB_NAME` | Credenciais do app |
-| `MYSQL_ROOT_PASSWORD` | Root interno do MariaDB |
+| `MYSQL_ROOT_PASSWORD` | Root interno |
+| `MYSQL_DATADIR` | `/var/data/mysql` (disco persistente) |
+| `ADMIN_PASS` | (opcional) redefine senha do user `admin` no boot |
 
-## Testar no PC (opcional, precisa Docker Desktop)
+## Testar no PC (Docker)
 
 ```bash
 docker build -t ttkpro .
-docker run --rm -p 8080:80 -e PORT=80 ttkpro
+docker run --rm -p 8080:80 -e PORT=80 -v ttkpro-data:/var/data ttkpro
 ```
 
-Abra: [http://localhost:8080](http://localhost:8080)
+## Extensao Chrome
 
-## Extensão Chrome
-
-A pasta `[PREMIUM]` / extensão **não** sobe no Render. Instale localmente no Chrome (modo desenvolvedor) se for usar.
-
-## Problemas comuns
-
-- **Build demorado / falhou:** tente de novo; no free às vezes a máquina dorme.
-- **Site “acordando” lento:** no free o serviço hiberna após inatividade.
-- **Banco sumiu após restart:** normal no free; o SQL reimporta sozinho se as tabelas não existirem.
-- **Erro 500 de banco:** veja os logs do serviço no Render (Logs).
-
-## Próximo nível (quando for sério)
-
-- MySQL externo (Aiven / Railway) com dados persistentes
-- Subir também o `admin-app` (superadmin)
-- Trocar SMTP / salt / segredos do `config.php`
+A pasta da extensao **nao** sobe como app no Render. Instale localmente no Chrome se for usar.

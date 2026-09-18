@@ -8,17 +8,33 @@ DB_PASS="${DB_PASS:-ttkpro}"
 DB_NAME="${DB_NAME:-ttkpro}"
 MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-rootpass}"
 ADMIN_PASS="${ADMIN_PASS:-admin123}"
+# Disco persistente do Render (pago): /var/data — sem isso o banco some no redeploy
+MYSQL_DATADIR="${MYSQL_DATADIR:-/var/data/mysql}"
 
 echo "[ttkpro] Ajustando Apache para porta ${PORT}..."
 sed -i "s/^Listen .*/Listen ${PORT}/" /etc/apache2/ports.conf
 sed -i "s#<VirtualHost \*:.*>#<VirtualHost *:${PORT}>#" /etc/apache2/sites-enabled/000-default.conf
 
+echo "[ttkpro] Preparando datadir MariaDB em ${MYSQL_DATADIR}..."
+mkdir -p "${MYSQL_DATADIR}" /var/data/payments/pending /var/data/payments/paid
+chown -R mysql:mysql /var/data
+# App PHP grava payments no path antigo; mantem symlink se ainda nao existir
+if [ ! -e /var/www/html/payments ]; then
+  ln -s /var/data/payments /var/www/html/payments
+elif [ -d /var/www/html/payments ] && [ ! -L /var/www/html/payments ]; then
+  # Migra arquivos locais (se houver) e troca por symlink persistente
+  cp -a /var/www/html/payments/. /var/data/payments/ 2>/dev/null || true
+  rm -rf /var/www/html/payments
+  ln -s /var/data/payments /var/www/html/payments
+fi
+chown -R www-data:www-data /var/data/payments 2>/dev/null || true
+
 echo "[ttkpro] Iniciando MariaDB..."
-if [ ! -d /var/lib/mysql/mysql ]; then
-  mysql_install_db --user=mysql --datadir=/var/lib/mysql >/dev/null
+if [ ! -d "${MYSQL_DATADIR}/mysql" ]; then
+  mysql_install_db --user=mysql --datadir="${MYSQL_DATADIR}" >/dev/null
 fi
 
-mysqld --user=mysql --datadir=/var/lib/mysql --bind-address=127.0.0.1 --skip-networking=0 &
+mysqld --user=mysql --datadir="${MYSQL_DATADIR}" --bind-address=127.0.0.1 --skip-networking=0 &
 
 echo "[ttkpro] Aguardando MariaDB..."
 for i in $(seq 1 60); do
@@ -51,7 +67,7 @@ if [ "$TABLE_COUNT" = "0" ]; then
   mysql -u root "${DB_NAME}" < /var/www/html/database-v1.6.sql
   echo "[ttkpro] Import concluido."
 else
-  echo "[ttkpro] Banco ja tem ${TABLE_COUNT} tabelas — pulando import."
+  echo "[ttkpro] Banco ja tem ${TABLE_COUNT} tabelas — pulando import (dados persistentes)."
 fi
 
 echo "[ttkpro] Definindo senha local do admin..."
@@ -99,10 +115,12 @@ ALTER TABLE recommendations ADD PRIMARY KEY (id);
 ALTER TABLE recommendations MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT;
 ALTER TABLE recommendation_variations ADD PRIMARY KEY (id);
 ALTER TABLE recommendation_variations MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT;
+ALTER TABLE gateway_settings MODIFY public_key TEXT NULL;
+ALTER TABLE gateway_settings MODIFY secret_key TEXT NULL;
 EOSQL
 
-mkdir -p /var/www/html/payments/pending /var/www/html/payments/paid /var/www/html/exports /var/www/html/projects
-chown -R www-data:www-data /var/www/html/payments /var/www/html/exports /var/www/html/projects
+mkdir -p /var/www/html/exports /var/www/html/projects
+chown -R www-data:www-data /var/www/html/exports /var/www/html/projects /var/data/payments
 
 echo "[ttkpro] Subindo Apache na porta ${PORT}..."
 exec apache2-foreground

@@ -2,8 +2,12 @@ services:
   - type: web
     name: ttkpro
     runtime: docker
-    plan: free
+    plan: standard
     dockerfilePath: ./Dockerfile
+    disk:
+      name: ttkpro-data
+      mountPath: /var/data
+      sizeGB: 5
     envVars:
       - key: DB_HOST
         value: "127.0.0.1"
@@ -15,3 +19,5 @@ services:
         value: ttkpro
       - key: MYSQL_ROOT_PASSWORD
         value: rootpass
+      - key: MYSQL_DATADIR
+        value: "/var/data/mysql"
