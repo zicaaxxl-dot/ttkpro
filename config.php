@@ -46,7 +46,11 @@ define('MISTICPAY_CLIENT_ID', $gateway_public);
 define('MISTICPAY_CLIENT_SECRET', $gateway_secret);
 
 // Credenciais Pixzy (Bearer Token no Secret; cai pro Public se Secret vazio)
-define('PIXZY_API_TOKEN', !empty($gateway_secret) ? $gateway_secret : $gateway_public);
+$__pixzyTok = trim(!empty($gateway_secret) ? $gateway_secret : $gateway_public);
+if (stripos($__pixzyTok, 'Bearer ') === 0) {
+    $__pixzyTok = trim(substr($__pixzyTok, 7));
+}
+define('PIXZY_API_TOKEN', $__pixzyTok);
 
 // ============================================================
 // 3. CONFIGURAÇÕES DE URL E DIRETÓRIOS (mantidos iguais)

@@ -1,14 +1,16 @@
 <?php
 /**
  * Verificar status de pagamento
+ * Prioridade: banco (webhook) → arquivos paid/pending
  */
 
 header('Content-Type: application/json');
 require_once 'config.php';
 
 $transactionId = $_GET['transaction_id'] ?? '';
+$transactionId = preg_replace('/[^a-zA-Z0-9_.\-]/', '', (string) $transactionId);
 
-if (empty($transactionId)) {
+if ($transactionId === '') {
     echo json_encode([
         'success' => false,
         'status' => 'invalid',
@@ -17,16 +19,9 @@ if (empty($transactionId)) {
     exit;
 }
 
-// Verificar se está na pasta de pagos
-$paidFile = PAID_DIR . '/' . $transactionId . '.json';
-$pendingFile = PENDING_DIR . '/' . $transactionId . '.json';
-
-if (file_exists($paidFile)) {
-    // Pagamento confirmado
-    $paymentData = json_decode(file_get_contents($paidFile), true);
-
+function respondPaid(string $transactionId, $amount = null, $paidAt = null): void
+{
     $tok = substr(hash('sha256', $transactionId . ACCESS_TOKEN_SALT), 0, 32);
-
     echo json_encode([
         'success' => true,
         'status' => 'paid',
@@ -34,25 +29,58 @@ if (file_exists($paidFile)) {
         'message' => 'Pagamento confirmado',
         'data' => [
             'transaction_id' => $transactionId,
-            'amount' => $paymentData['valor'],
-            'paid_at' => $paymentData['paid_at'] ?? null
+            'amount' => $amount,
+            'paid_at' => $paidAt
         ]
     ]);
+}
 
-} elseif (file_exists($pendingFile)) {
-    // Ainda pendente
+// 1) Banco primeiro — webhook grava aqui mesmo se o disco pending sumir
+$db = getPaymentById($transactionId);
+if ($db) {
+    if (($db['status'] ?? '') === 'paid') {
+        respondPaid(
+            $transactionId,
+            $db['amount'] ?? null,
+            $db['paid_at'] ?? null
+        );
+        exit;
+    }
+    if (($db['status'] ?? '') === 'pending') {
+        echo json_encode([
+            'success' => true,
+            'status' => 'pending',
+            'message' => 'Aguardando pagamento'
+        ]);
+        exit;
+    }
+}
+
+// 2) Arquivos (compatibilidade / ZIP exportado)
+$paidFile = PAID_DIR . '/' . $transactionId . '.json';
+$pendingFile = PENDING_DIR . '/' . $transactionId . '.json';
+
+if (file_exists($paidFile)) {
+    $paymentData = json_decode(file_get_contents($paidFile), true);
+    respondPaid(
+        $transactionId,
+        $paymentData['valor'] ?? null,
+        $paymentData['paid_at'] ?? null
+    );
+    exit;
+}
+
+if (file_exists($pendingFile)) {
     echo json_encode([
         'success' => true,
         'status' => 'pending',
         'message' => 'Aguardando pagamento'
     ]);
-
-} else {
-    // Não encontrado
-    echo json_encode([
-        'success' => false,
-        'status' => 'not_found',
-        'message' => 'Pagamento não encontrado'
-    ]);
+    exit;
 }
-?>
+
+echo json_encode([
+    'success' => false,
+    'status' => 'not_found',
+    'message' => 'Pagamento não encontrado'
+]);

@@ -28,9 +28,24 @@ function getGatewaySettings(): array
  */
 function saveGatewaySettings(string $provider, string $publicKey, string $secretKey): bool
 {
+    ensureProjectTablesSchema();
+
     $provider = in_array($provider, ['nexypay', 'ecompag', 'blackcat', 'misticpay', 'pixzy'], true)
         ? $provider
         : 'nexypay';
+
+    $publicKey = trim($publicKey);
+    $secretKey = trim($secretKey);
+
+    // Pixzy tem apenas 1 token (Bearer). Se o usuario colar no Public, usamos igual.
+    if ($provider === 'pixzy') {
+        $token = $secretKey !== '' ? $secretKey : $publicKey;
+        if (stripos($token, 'Bearer ') === 0) {
+            $token = trim(substr($token, 7));
+        }
+        $secretKey = $token;
+        $publicKey = '';
+    }
 
     $stmt = db()->prepare("
         INSERT INTO gateway_settings (id, provider, public_key, secret_key)
@@ -43,8 +58,8 @@ function saveGatewaySettings(string $provider, string $publicKey, string $secret
 
     return $stmt->execute([
         ':provider' => $provider,
-        ':public_key' => trim($publicKey),
-        ':secret_key' => trim($secretKey),
+        ':public_key' => $publicKey,
+        ':secret_key' => $secretKey,
     ]);
 }
 
@@ -107,6 +122,12 @@ function ensureProjectTablesSchema(): void
         "ALTER TABLE recommendation_variations MODIFY checkout_url TEXT NULL",
         "ALTER TABLE projects MODIFY footer_pol TEXT NULL",
         "ALTER TABLE projects MODIFY footer_term TEXT NULL",
+        "ALTER TABLE gateway_settings MODIFY public_key TEXT NULL",
+        "ALTER TABLE gateway_settings MODIFY secret_key TEXT NULL",
+        "ALTER TABLE payments ADD PRIMARY KEY (id)",
+        "ALTER TABLE payments MODIFY id INT NOT NULL AUTO_INCREMENT",
+        "ALTER TABLE payments MODIFY payment_id VARCHAR(191) NOT NULL",
+        "ALTER TABLE payments ADD UNIQUE KEY uniq_payment_id (payment_id)",
     ];
     foreach ($statements as $sql) {
         try {
@@ -474,12 +495,32 @@ function getActiveProject(): ?array
 }
 
 /* ============================================================
- * 3) PAGAMENTOS (substitui os arquivos em payments/pending e payments/paid)
+ * 3) PAGAMENTOS
  * ============================================================ */
 
 function savePayment(string $paymentId, string $gateway, float $amount, ?int $projectId, array $customer = [], array $rawPayload = []): bool
 {
-    $stmt = db()->prepare("
+    ensureProjectTablesSchema();
+    $pdo = db();
+    $existing = getPaymentById($paymentId);
+    if ($existing) {
+        $stmt = $pdo->prepare("
+            UPDATE payments
+            SET gateway = ?, amount = ?, customer_name = ?, customer_email = ?, customer_cpf = ?, raw_payload = ?
+            WHERE payment_id = ?
+        ");
+        return $stmt->execute([
+            $gateway,
+            $amount,
+            $customer['name'] ?? '',
+            $customer['email'] ?? '',
+            $customer['cpf'] ?? '',
+            json_encode($rawPayload, JSON_UNESCAPED_UNICODE),
+            $paymentId,
+        ]);
+    }
+
+    $stmt = $pdo->prepare("
         INSERT INTO payments (payment_id, project_id, gateway, status, amount, customer_name, customer_email, customer_cpf, raw_payload)
         VALUES (:payment_id, :project_id, :gateway, 'pending', :amount, :name, :email, :cpf, :raw)
     ");
@@ -497,15 +538,39 @@ function savePayment(string $paymentId, string $gateway, float $amount, ?int $pr
 
 function updatePaymentStatus(string $paymentId, string $status): bool
 {
+    ensureProjectTablesSchema();
     $paidAt = $status === 'paid' ? date('Y-m-d H:i:s') : null;
-    $stmt = db()->prepare("UPDATE payments SET status = ?, paid_at = ? WHERE payment_id = ?");
+    $stmt = db()->prepare("UPDATE payments SET status = ?, paid_at = COALESCE(?, paid_at) WHERE payment_id = ?");
     return $stmt->execute([$status, $paidAt, $paymentId]);
+}
+
+function markPaymentPaid(string $paymentId, array $rawExtra = []): bool
+{
+    ensureProjectTablesSchema();
+    $row = getPaymentById($paymentId);
+    if (!$row) {
+        savePayment($paymentId, $rawExtra['gateway'] ?? 'pixzy', (float) ($rawExtra['amount'] ?? 0), null, [
+            'name' => $rawExtra['nome'] ?? ($rawExtra['customer_name'] ?? ''),
+            'email' => $rawExtra['email'] ?? ($rawExtra['customer_email'] ?? ''),
+            'cpf' => $rawExtra['cpf'] ?? ($rawExtra['customer_cpf'] ?? ''),
+        ], $rawExtra);
+    }
+    return updatePaymentStatus($paymentId, 'paid');
 }
 
 function getPaymentById(string $paymentId): ?array
 {
+    ensureProjectTablesSchema();
     $stmt = db()->prepare("SELECT * FROM payments WHERE payment_id = ?");
     $stmt->execute([$paymentId]);
     $row = $stmt->fetch();
     return $row ?: null;
+}
+
+function listPayments(int $limit = 200): array
+{
+    ensureProjectTablesSchema();
+    $limit = max(1, min(500, $limit));
+    $stmt = db()->query("SELECT * FROM payments ORDER BY id DESC LIMIT {$limit}");
+    return $stmt->fetchAll() ?: [];
 }

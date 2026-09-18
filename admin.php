@@ -793,6 +793,8 @@ $titulo = 'Visão Geral - ttkpro';
         <div class="header-center">Editor de Produto PRO</div>
         <div class="header-right">
             <span class="header-user">Bem vindo de volta, Admin</span>
+            <a href="vendas.php" class="btn btn-ghost"
+                style="font-size:12px;padding:7px 14px;text-decoration:none;margin-right:8px;border:1px solid #e5e7eb;">Vendas</a>
             <a href="logout.php" class="btn btn-black"
                 style="font-size:12px;padding:7px 14px;text-decoration:none;">Sair</a>
         </div>
@@ -999,7 +1001,12 @@ $titulo = 'Visão Geral - ttkpro';
                         </select>
                     </div>
                     <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:14px">
-                        <label>Autenticação: Public Key + Secret Key</label>
+                        <label id="gwAuthLabel">Autenticação: Public Key + Secret Key</label>
+                        <p id="gwPixzyHint" style="display:none;font-size:12px;color:#4b5563;margin:6px 0 10px;line-height:1.45">
+                            A Pixzy usa <strong>apenas 1 Bearer Token</strong> (Configurações → Tokens de API).
+                            Cole o token completo no campo abaixo — sem prefixo "Bearer".
+                            Depois de salvar, gere um PIX de teste. Se a chave era antiga/truncada, cole de novo e salve.
+                        </p>
                         <input type="text" id="f_gw_public" class="input-text"
                             placeholder="pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx" style="margin-bottom:10px">
                         <input type="password" id="f_gw_secret" class="input-text input-blue"
@@ -1270,6 +1277,45 @@ $titulo = 'Visão Geral - ttkpro';
                 }, 500);
             }
 
+            function syncGatewayAuthFields() {
+                const provider = $('f_gateway').value;
+                const publicEl = $('f_gw_public');
+                const secretEl = $('f_gw_secret');
+                const label = $('gwAuthLabel');
+                const hint = $('gwPixzyHint');
+                const isPixzy = provider === 'pixzy';
+
+                if (hint) hint.style.display = isPixzy ? 'block' : 'none';
+                if (publicEl) publicEl.style.display = isPixzy ? 'none' : 'block';
+
+                if (isPixzy) {
+                    if (label) label.textContent = 'Pixzy — Bearer Token (Secret)';
+                    if (secretEl) secretEl.placeholder = 'Cole o Bearer Token da Pixzy aqui';
+                } else {
+                    if (label) label.textContent = 'Autenticação: Public Key + Secret Key';
+                    if (secretEl) secretEl.placeholder = 'sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+                    if (publicEl) publicEl.placeholder = 'pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+                }
+            }
+
+            async function loadGatewayFromServer() {
+                try {
+                    const res = await fetch('get_gateway.php');
+                    const result = await res.json();
+                    if (!result.success || !result.data) return;
+                    const d = result.data;
+                    if (d.provider) $('f_gateway').value = d.provider;
+                    $('f_gw_public').value = d.public_key || '';
+                    $('f_gw_secret').value = d.secret_key || '';
+                    if (project && project.gateway) {
+                        project.gateway.provider = d.provider || project.gateway.provider;
+                        project.gateway.public_key = d.public_key || '';
+                        project.gateway.secret_key = d.secret_key || '';
+                    }
+                    syncGatewayAuthFields();
+                } catch (e) { /* silencioso */ }
+            }
+
             /* ── TABS EDITOR ── */
             document.querySelectorAll('.tab').forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -1288,9 +1334,15 @@ $titulo = 'Visão Geral - ttkpro';
             });
 
             // NOVO: qualquer mudança no gateway vai direto pro banco
-            $('f_gateway').addEventListener('change', () => { syncFormToProject(); pushGatewayToServer(); });
+            $('f_gateway').addEventListener('change', () => {
+                syncGatewayAuthFields();
+                syncFormToProject();
+                pushGatewayToServer();
+            });
             $('f_gw_public').addEventListener('input', () => { syncFormToProject(); pushGatewayToServer(); });
             $('f_gw_secret').addEventListener('input', () => { syncFormToProject(); pushGatewayToServer(); });
+            syncGatewayAuthFields();
+            loadGatewayFromServer();
 
             $('f_own_checkout').addEventListener('change', () => {
                 $('externalLinkWrap').style.display = $('f_own_checkout').checked ? 'none' : 'block';

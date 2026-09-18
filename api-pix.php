@@ -555,6 +555,13 @@ function gerarPixPixzy($nome, $email, $cpf, $phone, $valor, $descricao, $plano)
 
         file_put_contents(PENDING_DIR . '/' . $safeId . '.json', json_encode($paymentData, JSON_PRETTY_PRINT));
 
+        // Persiste no banco — webhook/check-payment usam isso (Render free limpa disco)
+        savePayment($transactionId, 'pixzy', (float) $valor, null, [
+            'name' => $nome,
+            'email' => $email,
+            'cpf' => $cpf,
+        ], $paymentData);
+
         return [
             'success' => true,
             'message' => 'QR Code gerado com sucesso',
