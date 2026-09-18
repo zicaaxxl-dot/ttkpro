@@ -65,6 +65,7 @@ file_put_contents("/tmp/ttkpro_set_admin.sql", $sql);
 '
 mysql -u root "${DB_NAME}" < /tmp/ttkpro_set_admin.sql
 echo "[ttkpro] Login local: usuario=admin"
+mysql -u root "${DB_NAME}" -e "ALTER TABLE projects ADD UNIQUE KEY uniq_project_name (name);" 2>/dev/null || true
 
 mkdir -p /var/www/html/payments/pending /var/www/html/payments/paid /var/www/html/exports /var/www/html/projects
 chown -R www-data:www-data /var/www/html/payments /var/www/html/exports /var/www/html/projects

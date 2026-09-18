@@ -184,6 +184,19 @@ $titulo = 'Visão Geral - ttkpro';
             border: 1px solid #d1d5db
         }
 
+        .btn-publish {
+            background: #16a34a;
+            width: 100%;
+            padding: 14px;
+            font-size: 14px;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            color: #fff !important;
+            border: none;
+            cursor: pointer;
+        }
         .btn-download {
             background: #ff4d4f;
             width: 100%;
@@ -1084,6 +1097,8 @@ $titulo = 'Visão Geral - ttkpro';
         <div class="col-preview">
             <div class="card-preview">
                 <div class="card-title-header">Prévia do Site</div>
+                <button class="btn btn-publish" id="btnPublishPage">🚀 PUBLICAR PAGINA ONLINE</button>
+                <div id="publishResult" style="display:none;margin-bottom:12px;padding:10px;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:6px;font-size:12px;word-break:break-all"></div>
                 <button class="btn btn-download" id="btnDownloadZip">⬇ BAIXAR SITE COMPLETO (.ZIP)</button>
 
                 <div class="preview-tabs" id="previewTabs">
@@ -1770,6 +1785,40 @@ $titulo = 'Visão Geral - ttkpro';
                 };
                 reader.readAsText(file);
                 e.target.value = '';
+            };
+
+            $('btnPublishPage').onclick = async () => {
+                syncFormToProject();
+                const btn = $('btnPublishPage');
+                const box = $('publishResult');
+                const orig = btn.innerHTML;
+                btn.innerHTML = '<span class="spin">⏳</span> Publicando...';
+                btn.style.pointerEvents = 'none'; btn.style.opacity = '.7';
+                try {
+                    const res = await fetch('publish.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(project)
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        box.style.display = 'block';
+                        box.innerHTML = '✅ Pagina no ar:<br><a href="' + data.url + '" target="_blank" rel="noopener">' + data.url + '</a>'
+                            + '<br><button type="button" class="btn btn-ghost mt-8" id="btnCopyPublishUrl" style="margin-top:8px">📋 Copiar link</button>';
+                        const copyBtn = $('btnCopyPublishUrl');
+                        if (copyBtn) copyBtn.onclick = () => {
+                            navigator.clipboard?.writeText(data.url).then(() => toast('Link copiado!', 'success'));
+                        };
+                        toast('Pagina publicada!', 'success');
+                        try { window.open(data.url, '_blank'); } catch (_) {}
+                    } else {
+                        toast((data && data.message) ? data.message : 'Falha ao publicar', 'error');
+                    }
+                } catch (ex) {
+                    toast('Falha na conexao ao publicar.', 'error');
+                } finally {
+                    btn.innerHTML = orig; btn.style.pointerEvents = 'auto'; btn.style.opacity = '1';
+                }
             };
 
             $('btnDownloadZip').onclick = async () => {

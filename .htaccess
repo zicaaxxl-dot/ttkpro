@@ -4,6 +4,16 @@
 # ========================================
 
 # ========================================
+# Pagina publica do produto: /p/slug -> p.php?path=slug
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^p/?$ p.php [L,QSA]
+    RewriteRule ^p/([^/]+)/?$ p.php?path=# OCULTAR EXTENSÃO .PHP DAS URLS
+# ========================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On [L,QSA]
+</IfModule>
+
 # OCULTAR EXTENSÃO .PHP DAS URLS
 # ========================================
 <IfModule mod_rewrite.c>

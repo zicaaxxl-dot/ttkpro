@@ -361,6 +361,40 @@ function getProjectFull(int $projectId): ?array
     ];
 }
 
+
+/** Gera slug amigavel a partir do nome do projeto. */
+function slugifyProjectName(string $name): string
+{
+    $s = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $name);
+    if ($s === false) {
+        $s = $name;
+    }
+    $s = strtolower($s);
+    $s = preg_replace('/[^a-z0-9]+/', '-', $s);
+    $s = trim($s, '-');
+    return $s !== '' ? $s : 'produto';
+}
+
+/** Busca projeto pelo slug (nome slugificado) ou pelo id numerico. */
+function getProjectBySlug(string $slug): ?array
+{
+    $slug = trim($slug, '/');
+    if ($slug === '') {
+        return null;
+    }
+
+    if (ctype_digit($slug)) {
+        return getProjectFull((int) $slug);
+    }
+
+    $rows = db()->query('SELECT id, name FROM projects')->fetchAll();
+    foreach ($rows as $row) {
+        if (slugifyProjectName($row['name']) === $slug) {
+            return getProjectFull((int) $row['id']);
+        }
+    }
+    return null;
+}
 /** Projeto atualmente ativo (usado pelas páginas públicas). */
 function getActiveProject(): ?array
 {

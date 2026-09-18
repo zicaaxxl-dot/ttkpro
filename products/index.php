@@ -478,6 +478,12 @@ $produtos = [
             <div class="sticky top-6">
 
                 <button
+                    class="w-full mb-3 px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 uppercase tracking-wide"
+                    id="btnPublishPage">
+                    <i class="ph ph-rocket-launch text-xl"></i> Publicar Pagina Online
+                </button>
+                <div id="publishResult" class="hidden mb-3 p-3 bg-green-50 border border-green-200 rounded-xl text-xs text-green-900 break-all"></div>
+                <button
                     class="w-full mb-4 px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 uppercase tracking-wide"
                     id="btnDownloadZip">
                     <i class="ph ph-download-simple text-xl"></i> Baixar Site Completo (.ZIP)
@@ -1017,6 +1023,38 @@ $produtos = [
             reader.readAsText(file); e.target.value = '';
         });
     })();
+
+        const btnPublishPage = document.getElementById('btnPublishPage');
+        if (btnPublishPage) {
+            btnPublishPage.addEventListener('click', async () => {
+                syncFormToProject();
+                const box = document.getElementById('publishResult');
+                const orig = btnPublishPage.innerHTML;
+                btnPublishPage.innerHTML = 'Publicando...';
+                btnPublishPage.disabled = true;
+                try {
+                    const res = await fetch('../publish.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(project)
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        box.classList.remove('hidden');
+                        box.innerHTML = 'Pagina no ar: <a class="underline font-semibold" href="' + data.url + '" target="_blank">' + data.url + '</a>';
+                        toast('Pagina publicada!', 'success');
+                        try { window.open(data.url, '_blank'); } catch (_) {}
+                    } else {
+                        toast((data && data.message) || 'Falha ao publicar', 'error');
+                    }
+                } catch (e) {
+                    toast('Falha na conexao', 'error');
+                } finally {
+                    btnPublishPage.innerHTML = orig;
+                    btnPublishPage.disabled = false;
+                }
+            });
+        }
 </script>
 
 <?php
