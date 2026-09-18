@@ -7,6 +7,7 @@ DB_USER="${DB_USER:-ttkpro}"
 DB_PASS="${DB_PASS:-ttkpro}"
 DB_NAME="${DB_NAME:-ttkpro}"
 MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-rootpass}"
+ADMIN_PASS="${ADMIN_PASS:-admin123}"
 
 echo "[ttkpro] Ajustando Apache para porta ${PORT}..."
 sed -i "s/^Listen .*/Listen ${PORT}/" /etc/apache2/ports.conf
@@ -18,7 +19,6 @@ if [ ! -d /var/lib/mysql/mysql ]; then
 fi
 
 mysqld --user=mysql --datadir=/var/lib/mysql --bind-address=127.0.0.1 --skip-networking=0 &
-MYSQL_PID=$!
 
 echo "[ttkpro] Aguardando MariaDB..."
 for i in $(seq 1 60); do
@@ -54,8 +54,17 @@ else
   echo "[ttkpro] Banco ja tem ${TABLE_COUNT} tabelas — pulando import."
 fi
 
-# Extende assinatura admin ate +1 ano (teste)
-mysql -u root "${DB_NAME}" -e "UPDATE subscribers SET subscription_expires_at = DATE_ADD(NOW(), INTERVAL 1 YEAR), status='active' WHERE username='admin';" || true
+echo "[ttkpro] Definindo senha local do admin..."
+ADMIN_PASS="$ADMIN_PASS" php -r '
+$pass = getenv("ADMIN_PASS") ?: "admin123";
+$hash = password_hash($pass, PASSWORD_DEFAULT);
+$sql = "UPDATE subscribers SET password_hash=" . var_export($hash, true)
+     . ", status=\"active\", subscription_expires_at=DATE_ADD(NOW(), INTERVAL 1 YEAR)"
+     . " WHERE username=\"admin\";\n";
+file_put_contents("/tmp/ttkpro_set_admin.sql", $sql);
+'
+mysql -u root "${DB_NAME}" < /tmp/ttkpro_set_admin.sql
+echo "[ttkpro] Login local: usuario=admin"
 
 mkdir -p /var/www/html/payments/pending /var/www/html/payments/paid /var/www/html/exports /var/www/html/projects
 chown -R www-data:www-data /var/www/html/payments /var/www/html/exports /var/www/html/projects

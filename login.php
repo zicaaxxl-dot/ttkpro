@@ -1,73 +1,60 @@
 <?php
 $titulo = 'Login - ttkpro';
 
-// ttkpro-editor/login.php
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/db.php';
 startAdminSession();
 
 $error = '';
 
-/** Garante um device_id persistente (cookie de 1 ano). */
-function getOrCreateDeviceId(): string
+/** Autentica no banco local (tabela subscribers). */
+function verifyLocalLogin(string $username, string $password): array
 {
-    if (!empty($_COOKIE['epro_device_id'])) {
-        return $_COOKIE['epro_device_id'];
-    }
-    $deviceId = bin2hex(random_bytes(16));
-    setcookie('epro_device_id', $deviceId, time() + 60 * 60 * 24 * 365, '/', '', true, true);
-    return $deviceId;
-}
-
-/** Chama a API do SuperAdmin com o payload assinado via HMAC. */
-function verifyWithSuperAdmin(string $username, string $password, string $deviceId): array
-{
-    $payload = [
-        'username' => $username,
-        'password' => $password,
-        'device_id' => $deviceId,
-        'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
-        'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
-        'timestamp' => time(),
-    ];
-    $signature = hash_hmac('sha256', json_encode($payload, JSON_UNESCAPED_SLASHES), SUPERADMIN_SHARED_SECRET);
-
-    $ch = curl_init(SUPERADMIN_API_URL);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => json_encode(['payload' => $payload, 'signature' => $signature]),
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-        CURLOPT_TIMEOUT => 10,
-        CURLOPT_SSL_VERIFYPEER => true,
-    ]);
-    $response = curl_exec($ch);
-    $err = curl_error($ch);
-    curl_close($ch);
-
-    if ($err || !$response) {
+    try {
+        $stmt = db()->prepare(
+            'SELECT id, name, username, password_hash, status, subscription_expires_at
+             FROM subscribers
+             WHERE username = ?
+             LIMIT 1'
+        );
+        $stmt->execute([$username]);
+        $row = $stmt->fetch();
+    } catch (Throwable $e) {
+        error_log('[ttkpro] login DB error: ' . $e->getMessage());
         return ['ok' => false, 'reason' => 'connection_error'];
     }
 
-    $decoded = json_decode($response, true);
-
-    // SE NÃO FOR JSON, VAMOS SALVAR O QUE VOLTOU!
-    if (!$decoded) {
-        // Cria um arquivo de texto com a resposta bruta da API
-        file_put_contents(__DIR__ . '/debug_api_response.txt', $response);
-        return ['ok' => false, 'reason' => 'erro_html_na_api'];
+    if (!$row || !password_verify($password, $row['password_hash'])) {
+        return ['ok' => false, 'reason' => 'invalid_credentials'];
     }
 
-    return $decoded;
+    if (($row['status'] ?? '') === 'blocked') {
+        return ['ok' => false, 'reason' => 'account_blocked'];
+    }
 
+    if (!empty($row['subscription_expires_at'])) {
+        $expires = strtotime($row['subscription_expires_at']);
+        if ($expires !== false && $expires < time()) {
+            return ['ok' => false, 'reason' => 'subscription_expired'];
+        }
+    }
+
+    return [
+        'ok' => true,
+        'subscriber' => [
+            'id' => $row['id'],
+            'name' => $row['name'],
+            'username' => $row['username'],
+        ],
+    ];
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $user = $_POST['username'] ?? '';
+    $user = trim($_POST['username'] ?? '');
     $pass = $_POST['password'] ?? '';
 
-    if (!empty($user) && !empty($pass)) {
-        $deviceId = getOrCreateDeviceId();
-        $result = verifyWithSuperAdmin($user, $pass, $deviceId);
+    if ($user !== '' && $pass !== '') {
+        $result = verifyLocalLogin($user, $pass);
 
         if (!empty($result['ok'])) {
             session_regenerate_id(true);
@@ -75,22 +62,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['admin_user'] = $result['subscriber']['username'] ?? $user;
             header('Location: admin');
             exit;
-        } else {
-            $reason = $result['reason'] ?? '';
-
-            $errorMessages = [
-                'invalid_credentials' => 'Usuário ou senha incorretos.',
-                'account_blocked' => 'Sua conta está bloqueada. Contate o suporte.',
-                'device_blocked' => 'Este dispositivo foi bloqueado. Contate o suporte.',
-                'device_limit_exceeded' => 'Limite de dispositivos excedido. Sua conta foi bloqueada — contate o suporte.',
-                'subscription_expired' => 'Sua assinatura expirou. Renove para continuar usando o painel.',
-                'connection_error' => 'Não foi possível validar seu acesso agora. Tente novamente em instantes.',
-                'erro_html_na_api' => 'Erro na API! Verifique o arquivo debug_api_response.txt'
-            ];
-
-            // Se não encontrar no array, exibe o $reason real na tela para podermos debugar
-            $error = $errorMessages[$reason] ?? "Falha ao autenticar (Erro retornado: " . htmlspecialchars($reason) . ").";
         }
+
+        $reason = $result['reason'] ?? '';
+        $errorMessages = [
+            'invalid_credentials' => 'Usuário ou senha incorretos.',
+            'account_blocked' => 'Sua conta está bloqueada. Contate o suporte.',
+            'subscription_expired' => 'Sua assinatura expirou. Renove para continuar usando o painel.',
+            'connection_error' => 'Não foi possível conectar ao banco de dados.',
+        ];
+        $error = $errorMessages[$reason] ?? 'Falha ao autenticar.';
     } else {
         $error = 'Por favor, preencha todos os campos.';
     }
@@ -130,13 +111,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 20px;
         }
 
-        /* O Logo agora é um componente centralizado */
+        /* O Logo agora Ã© um componente centralizado */
         .brand-logo {
             font-size: 24px;
             font-weight: 800;
             color: #111827;
             margin-bottom: 24px;
-            /* Espaço entre o logo e o card */
+            /* EspaÃ§o entre o logo e o card */
             display: flex;
             align-items: center;
             gap: 8px;
@@ -236,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <label for="username">Usuário</label>
+        <label for="username">UsuÃ¡rio</label>
         <input type="text" id="username" name="username" required autofocus>
 
         <label for="password">Senha</label>
