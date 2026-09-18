@@ -1812,7 +1812,7 @@ $titulo = 'Visão Geral - ttkpro';
                         toast('Pagina publicada!', 'success');
                         try { window.open(data.url, '_blank'); } catch (_) {}
                     } else {
-                        toast((data && data.message) ? data.message : 'Falha ao publicar', 'error');
+                        toast((data && data.debug) ? (data.message + ': ' + data.debug) : ((data && data.message) ? data.message : 'Falha ao publicar'), 'error');
                     }
                 } catch (ex) {
                     toast('Falha na conexao ao publicar.', 'error');

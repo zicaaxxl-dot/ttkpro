@@ -65,7 +65,25 @@ file_put_contents("/tmp/ttkpro_set_admin.sql", $sql);
 '
 mysql -u root "${DB_NAME}" < /tmp/ttkpro_set_admin.sql
 echo "[ttkpro] Login local: usuario=admin"
-mysql -u root "${DB_NAME}" -e "ALTER TABLE projects ADD UNIQUE KEY uniq_project_name (name);" 2>/dev/null || true
+mysql -u root "${DB_NAME}" <<'EOSQL' || true
+ALTER TABLE projects MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT;
+ALTER TABLE projects ADD PRIMARY KEY (id);
+ALTER TABLE projects ADD UNIQUE KEY uniq_project_name (name);
+ALTER TABLE project_images MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT;
+ALTER TABLE project_images ADD PRIMARY KEY (id);
+ALTER TABLE order_bumps MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT;
+ALTER TABLE order_bumps ADD PRIMARY KEY (id);
+ALTER TABLE reviews MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT;
+ALTER TABLE reviews ADD PRIMARY KEY (id);
+ALTER TABLE variation_groups MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT;
+ALTER TABLE variation_groups ADD PRIMARY KEY (id);
+ALTER TABLE variation_options MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT;
+ALTER TABLE variation_options ADD PRIMARY KEY (id);
+ALTER TABLE recommendations MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT;
+ALTER TABLE recommendations ADD PRIMARY KEY (id);
+ALTER TABLE recommendation_variations MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT;
+ALTER TABLE recommendation_variations ADD PRIMARY KEY (id);
+EOSQL
 
 mkdir -p /var/www/html/payments/pending /var/www/html/payments/paid /var/www/html/exports /var/www/html/projects
 chown -R www-data:www-data /var/www/html/payments /var/www/html/exports /var/www/html/projects

@@ -61,8 +61,49 @@ function saveGatewaySettings(string $provider, string $publicKey, string $secret
  *
  * Retorna o id do projeto salvo.
  */
+
+/**
+ * O dump SQL original veio incompleto (sem PK/AUTO_INCREMENT nas tabelas
+ * de projetos). Sem isso o INSERT do publish/save falha.
+ */
+function ensureProjectTablesSchema(): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $pdo = db();
+    $statements = [
+        "ALTER TABLE projects MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
+        "ALTER TABLE projects ADD PRIMARY KEY (id)",
+        "ALTER TABLE projects ADD UNIQUE KEY uniq_project_name (name)",
+        "ALTER TABLE project_images MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
+        "ALTER TABLE project_images ADD PRIMARY KEY (id)",
+        "ALTER TABLE order_bumps MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
+        "ALTER TABLE order_bumps ADD PRIMARY KEY (id)",
+        "ALTER TABLE reviews MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
+        "ALTER TABLE reviews ADD PRIMARY KEY (id)",
+        "ALTER TABLE variation_groups MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
+        "ALTER TABLE variation_groups ADD PRIMARY KEY (id)",
+        "ALTER TABLE variation_options MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
+        "ALTER TABLE variation_options ADD PRIMARY KEY (id)",
+        "ALTER TABLE recommendations MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
+        "ALTER TABLE recommendations ADD PRIMARY KEY (id)",
+        "ALTER TABLE recommendation_variations MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
+        "ALTER TABLE recommendation_variations ADD PRIMARY KEY (id)",
+    ];
+    foreach ($statements as $sql) {
+        try {
+            $pdo->exec($sql);
+        } catch (Throwable $e) {
+            // ja aplicado / duplicado — ignorar
+        }
+    }
+    $done = true;
+}
 function saveProject(array $data): int
 {
+    ensureProjectTablesSchema();
     $pdo = db();
     $pdo->beginTransaction();
 
