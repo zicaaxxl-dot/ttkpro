@@ -13,13 +13,13 @@ date_default_timezone_set('America/Sao_Paulo');
 define('ADMIN_USER', 'admin');
 define('ADMIN_PASS_HASH', '$2a$12$DIujPEFyApPryKtiuVal4u7Mu8MQ4/WY8fageZAhlXdS7qTwo3AMC'); // hash de "troque-esta-senha"
 
-// ── Integração com o SuperAdmin (login remoto) ──
-define('SUPERADMIN_API_URL', 'https://admin.kryonpay.com/api/verify.php');
-define('SUPERADMIN_SHARED_SECRET', 'ca405dce4cd4d121a380a145411292814659c37a68d6fa076277ae506b95deae');
-
-// ── Integração com o SuperAdmin (login remoto) ──
-define('SUPERADMIN_API_URL', 'https://admin.kryonpay.com/api/verify.php');
-define('SUPERADMIN_SHARED_SECRET', 'ca405dce4cd4d121a380a145411292814659c37a68d6fa076277ae506b95deae'); // idêntico ao SHARED_SECRET de lá
+// ── Integracao SuperAdmin (legado) ──
+if (!defined('SUPERADMIN_API_URL')) {
+    define('SUPERADMIN_API_URL', 'https://admin.kryonpay.com/api/verify.php');
+}
+if (!defined('SUPERADMIN_SHARED_SECRET')) {
+    define('SUPERADMIN_SHARED_SECRET', 'ca405dce4cd4d121a380a145411292814659c37a68d6fa076277ae506b95deae');
+}
 
 // ── Diretórios ─────────────────────────────────────────────────
 define('BASE_DIR', dirname(__DIR__));
