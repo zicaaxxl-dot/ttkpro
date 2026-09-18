@@ -74,23 +74,23 @@ function ensureProjectTablesSchema(): void
     }
     $pdo = db();
     $statements = [
-        "ALTER TABLE projects MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
         "ALTER TABLE projects ADD PRIMARY KEY (id)",
+        "ALTER TABLE projects MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
         "ALTER TABLE projects ADD UNIQUE KEY uniq_project_name (name)",
-        "ALTER TABLE project_images MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
         "ALTER TABLE project_images ADD PRIMARY KEY (id)",
-        "ALTER TABLE order_bumps MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
+        "ALTER TABLE project_images MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
         "ALTER TABLE order_bumps ADD PRIMARY KEY (id)",
-        "ALTER TABLE reviews MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
+        "ALTER TABLE order_bumps MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
         "ALTER TABLE reviews ADD PRIMARY KEY (id)",
-        "ALTER TABLE variation_groups MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
+        "ALTER TABLE reviews MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
         "ALTER TABLE variation_groups ADD PRIMARY KEY (id)",
-        "ALTER TABLE variation_options MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
+        "ALTER TABLE variation_groups MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
         "ALTER TABLE variation_options ADD PRIMARY KEY (id)",
-        "ALTER TABLE recommendations MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
+        "ALTER TABLE variation_options MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
         "ALTER TABLE recommendations ADD PRIMARY KEY (id)",
-        "ALTER TABLE recommendation_variations MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
+        "ALTER TABLE recommendations MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
         "ALTER TABLE recommendation_variations ADD PRIMARY KEY (id)",
+        "ALTER TABLE recommendation_variations MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
     ];
     foreach ($statements as $sql) {
         try {
