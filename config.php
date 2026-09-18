@@ -12,6 +12,7 @@ date_default_timezone_set('America/Sao_Paulo');
  *   - nexypay    -> secret_key = API Key     (cai pro public_key se secret vier vazio)
  *   - blackcat   -> secret_key = X-API-Key   (cai pro public_key se secret vier vazio)
  *   - misticpay  -> public_key = Client ID (ci) | secret_key = Client Secret (cs)
+ *   - pixzy      -> secret_key = Bearer Token  (cai pro public_key se secret vier vazio)
  */
 
 require_once __DIR__ . '/functions.php';
@@ -44,6 +45,9 @@ define('BLACKCAT_API_KEY', !empty($gateway_secret) ? $gateway_secret : $gateway_
 define('MISTICPAY_CLIENT_ID', $gateway_public);
 define('MISTICPAY_CLIENT_SECRET', $gateway_secret);
 
+// Credenciais Pixzy (Bearer Token no Secret; cai pro Public se Secret vazio)
+define('PIXZY_API_TOKEN', !empty($gateway_secret) ? $gateway_secret : $gateway_public);
+
 // ============================================================
 // 3. CONFIGURAÇÕES DE URL E DIRETÓRIOS (mantidos iguais)
 // ============================================================
@@ -54,6 +58,7 @@ define('WEBHOOK_URL_ECOMPAG', SITE_URL . '/webhook.php');
 define('WEBHOOK_URL_NEXYPAY', SITE_URL . '/webhook-nexypay.php');
 define('WEBHOOK_URL_BLACKCAT', SITE_URL . '/webhook-blackcat.php');
 define('WEBHOOK_URL_MISTICPAY', SITE_URL . '/webhook-misticpay.php');
+define('WEBHOOK_URL_PIXZY', SITE_URL . '/webhook-pixzy.php');
 define('WEBHOOK_URL', WEBHOOK_URL_ECOMPAG); // mantido por compatibilidade
 
 // Diretórios de armazenamento (payments/* pode ser removido depois que

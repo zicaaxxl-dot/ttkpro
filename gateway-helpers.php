@@ -72,3 +72,32 @@ function consultarStatusMisticPay($transactionId)
     $data = json_decode($response, true);
     return is_array($data) ? $data : ['transaction' => null, 'raw' => $response];
 }
+
+/**
+ * Consulta transacao Pixzy (UUID ou id).
+ * GET https://app.pixzypay.com/api/transactions/{id}
+ */
+function consultarStatusPixzy($transactionId)
+{
+    $ch = curl_init('https://app.pixzypay.com/api/transactions/' . rawurlencode($transactionId));
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . PIXZY_API_TOKEN,
+            'Content-Type: application/json',
+            'Accept: application/json',
+        ],
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_TIMEOUT => 15,
+    ]);
+    $response = curl_exec($ch);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($curlError) {
+        return ['success' => false, 'error' => $curlError];
+    }
+
+    $data = json_decode($response, true);
+    return is_array($data) ? $data : ['success' => false, 'raw' => $response];
+}

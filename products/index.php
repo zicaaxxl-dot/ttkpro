@@ -368,6 +368,7 @@ $produtos = [
                         <div>
                             <label class="block text-xs font-semibold text-gray-700 mb-1">Gateway Padrão</label>
                             <select id="f_gateway" class="input-field">
+                                <option value="pixzy">Pixzy</option>
                                 <option value="nexypay">QuantiumPay</option>
                                 <option value="ecompag">Ecompag</option>
                             </select>

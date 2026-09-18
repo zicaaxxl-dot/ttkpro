@@ -976,6 +976,7 @@ $titulo = 'Visão Geral - ttkpro';
                     <div class="form-group">
                         <label>Selecione o Gateway</label>
                         <select id="f_gateway" class="input-select">
+                            <option value="pixzy">Pixzy</option>
                             <option value="blackcat">BlackCat</option>
                             <option value="misticpay">MisticPay</option>
                             <option value="astrohub">AstroHub</option>

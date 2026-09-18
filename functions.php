@@ -28,7 +28,7 @@ function getGatewaySettings(): array
  */
 function saveGatewaySettings(string $provider, string $publicKey, string $secretKey): bool
 {
-    $provider = in_array($provider, ['nexypay', 'ecompag', 'blackcat', 'misticpay'], true)
+    $provider = in_array($provider, ['nexypay', 'ecompag', 'blackcat', 'misticpay', 'pixzy'], true)
         ? $provider
         : 'nexypay';
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * API PIX - Gerar cobrança (QuantiumPay, Ecompag, BlackCat ou MisticPay)
+ * API PIX - Gerar cobranca (QuantiumPay, Ecompag, BlackCat, MisticPay ou Pixzy)
  */
 
 header('Content-Type: application/json');
@@ -64,6 +64,9 @@ switch (ACTIVE_GATEWAY) {
         break;
     case 'misticpay':
         $result = gerarPixMisticPay($nome, $email, $cpf, $phone, $valor, $descricao, $plano);
+        break;
+    case 'pixzy':
+        $result = gerarPixPixzy($nome, $email, $cpf, $phone, $valor, $descricao, $plano);
         break;
     case 'ecompag':
     default:
@@ -450,6 +453,127 @@ function gerarPixMisticPay($nome, $email, $cpf, $phone, $valor, $descricao, $pla
     return [
         'success' => false,
         'message' => $apiResponse['message'] ?? 'Erro ao gerar QR Code PIX (MisticPay)',
+        'details' => $apiResponse,
+    ];
+}
+
+/* ============================================================
+   PIXZY (PixzyPay)
+   Docs: https://docs.pixzypay.com
+   Auth: Authorization Bearer Token
+   Valores em CENTAVOS (minimo 500 = R$ 5,00)
+   ============================================================ */
+function gerarPixPixzy($nome, $email, $cpf, $phone, $valor, $descricao, $plano)
+{
+    if (empty(PIXZY_API_TOKEN)) {
+        return ['success' => false, 'message' => 'Token Pixzy nao configurado. Salve o Bearer Token na aba Pagamento.'];
+    }
+
+    $paymentId = generateUniqueId();
+    $amountCents = (int) round($valor * 100);
+    if ($amountCents < 500) {
+        return ['success' => false, 'message' => 'Valor minimo da Pixzy e R$ 5,00'];
+    }
+
+    $postData = [
+        'amount' => $amountCents,
+        'client_name' => $nome,
+        'client_email' => $email,
+        'client_doc' => $cpf,
+        'client_phone' => $phone,
+        'webhook_url' => WEBHOOK_URL_PIXZY,
+        'metadata' => [
+            'payment_id' => $paymentId,
+            'plano' => $plano,
+        ],
+        'items' => [
+            [
+                'name' => $descricao,
+                'price' => $amountCents,
+                'quantity' => 1,
+            ],
+        ],
+    ];
+
+    $ch = curl_init('https://app.pixzypay.com/api/transactions');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($postData),
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'Accept: application/json',
+            'Authorization: Bearer ' . PIXZY_API_TOKEN,
+        ],
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_TIMEOUT => 30,
+    ]);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    @file_put_contents(
+        __DIR__ . '/api-pix.log',
+        date('Y-m-d H:i:s') . " - [Pixzy] HTTP $httpCode - Response: $response" . PHP_EOL,
+        FILE_APPEND
+    );
+
+    if ($curlError) {
+        return ['success' => false, 'message' => 'Erro ao conectar com o gateway de pagamento (Pixzy)'];
+    }
+
+    $apiResponse = json_decode($response, true);
+    $tx = $apiResponse['data'] ?? null;
+
+    if (
+        in_array($httpCode, [200, 201], true)
+        && is_array($tx)
+        && !empty($tx['transaction_id'])
+        && !empty($tx['br_code'])
+    ) {
+        $transactionId = $tx['transaction_id'];
+        $safeId = preg_replace('/[^a-zA-Z0-9_.\-]/', '', $transactionId);
+
+        $paymentData = [
+            'payment_id' => $paymentId,
+            'transaction_id' => $transactionId,
+            'gateway' => 'pixzy',
+            'status' => 'pending',
+            'nome' => $nome,
+            'email' => $email,
+            'cpf' => $cpf,
+            'phone' => $phone,
+            'valor' => $valor,
+            'plano' => $plano,
+            'descricao' => $descricao,
+            'qrcode' => $tx['br_code'],
+            'qrcode_base64' => $tx['qr_code'] ?? null,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s'),
+        ];
+
+        file_put_contents(PENDING_DIR . '/' . $safeId . '.json', json_encode($paymentData, JSON_PRETTY_PRINT));
+
+        return [
+            'success' => true,
+            'message' => 'QR Code gerado com sucesso',
+            'transaction_id' => $transactionId,
+            'qrcode' => $tx['br_code'],
+            'qrcode_base64' => $tx['qr_code'] ?? null,
+            'amount' => $valor,
+            'reference_code' => $transactionId,
+        ];
+    }
+
+    $msg = $apiResponse['error'] ?? $apiResponse['errors'] ?? $apiResponse['message'] ?? 'Erro ao gerar QR Code PIX (Pixzy)';
+    if (is_array($msg)) {
+        $msg = json_encode($msg, JSON_UNESCAPED_UNICODE);
+    }
+
+    return [
+        'success' => false,
+        'message' => $msg,
         'details' => $apiResponse,
     ];
 }
